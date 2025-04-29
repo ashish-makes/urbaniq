@@ -236,8 +236,8 @@ export default function ProductsPage() {
               <a href="/products?category=essentials" className="px-5 py-2 rounded-full border border-gray-300 font-medium text-sm hover:bg-black hover:text-white hover:border-black transition-all duration-200">
                 Essentials
               </a>
-            </div>
-          </div>
+                  </div>
+                </div>
         </section>
 
         {/* Search refinement and product listing section */}
@@ -305,7 +305,7 @@ export default function ProductsPage() {
                           >
                             Grooming
                           </button>
-                        </div>
+                  </div>
                       </AccordionContent>
                     </AccordionItem>
                     
@@ -317,18 +317,18 @@ export default function ProductsPage() {
                       <AccordionContent>
                         <div className="flex justify-between items-center mb-4">
                           <span className="text-sm text-gray-500">$199 - $799</span>
-                        </div>
+                </div>
                         
                         <div className="relative mb-6 pt-4">
                           <div className="h-1 bg-gray-200 rounded-full">
                             <div className="absolute h-1 bg-black rounded-full left-0 right-[50%]"></div>
-                          </div>
+              </div>
                           
                           <div className="absolute left-0 top-0 h-4 w-4 rounded-full bg-black border-2 border-white -translate-y-1/2 cursor-pointer hover:scale-110 transition-transform"></div>
                           
                           <div className="absolute right-[50%] top-0 h-4 w-4 rounded-full bg-black border-2 border-white -translate-y-1/2 cursor-pointer hover:scale-110 transition-transform"></div>
-                        </div>
-                        
+            </div>
+          
                         <div className="flex gap-4 mb-6">
                           <div className="flex-1">
                             <label htmlFor="min-price" className="text-xs text-gray-500 mb-1 block">Min</label>
@@ -341,8 +341,8 @@ export default function ProductsPage() {
                                 onChange={(e) => setMinPrice(Number(e.target.value))}
                                 className="w-full bg-gray-50 border border-gray-200 rounded px-6 py-2 text-sm"
                               />
-                            </div>
-                          </div>
+                </div>
+              </div>
                           
                           <div className="flex-1">
                             <label htmlFor="max-price" className="text-xs text-gray-500 mb-1 block">Max</label>
@@ -355,10 +355,10 @@ export default function ProductsPage() {
                                 onChange={(e) => setMaxPrice(Number(e.target.value))}
                                 className="w-full bg-gray-50 border border-gray-200 rounded px-6 py-2 text-sm"
                               />
-                            </div>
-                          </div>
-                        </div>
-                        
+                  </div>
+                </div>
+              </div>
+              
                         <button className="w-full bg-black text-white py-2.5 rounded-full font-medium text-sm transition-opacity hover:opacity-90">
                           Apply Filter
                         </button>
@@ -389,7 +389,7 @@ export default function ProductsPage() {
                               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="black" stroke="none" className="mr-1">
                                 <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
                               </svg>
-                            </div>
+                      </div>
                             <span className="ml-2 text-sm">5 stars</span>
                           </button>
                           
@@ -415,7 +415,7 @@ export default function ProductsPage() {
                           </button>
                           
                           <button className="flex items-center w-full py-1.5 hover:bg-gray-50 rounded transition-colors">
-                            <div className="flex items-center">
+                                <div className="flex items-center">
                               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="black" stroke="none" className="mr-1">
                                 <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
                               </svg>
@@ -429,12 +429,12 @@ export default function ProductsPage() {
                                 <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
                               </svg>
                               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="gray" stroke="none" className="mr-1">
-                                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-                              </svg>
-                            </div>
+                                        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                                      </svg>
+                                  </div>
                             <span className="ml-2 text-sm">3 stars & up</span>
                           </button>
-                        </div>
+                                </div>
                       </AccordionContent>
                     </AccordionItem>
                     
@@ -457,7 +457,7 @@ export default function ProductsPage() {
                             <input type="checkbox" className="rounded border-gray-300 text-black focus:ring-black h-4 w-4" />
                             <span className="ml-2 text-sm">Free shipping</span>
                           </label>
-                        </div>
+                              </div>
                       </AccordionContent>
                     </AccordionItem>
                   </Accordion>
@@ -465,8 +465,8 @@ export default function ProductsPage() {
                   <button className="w-full border border-gray-300 text-gray-700 py-2.5 rounded-full font-medium text-sm mt-4 hover:bg-gray-50 transition-colors">
                     Reset Filters
                   </button>
-                </div>
-              </div>
+                            </div>
+                          </div>
               
               {/* Right side product listings */}
               <div className="flex-1">

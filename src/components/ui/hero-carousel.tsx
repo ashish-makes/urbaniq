@@ -196,32 +196,7 @@ export function HeroCarousel({ slides }: HeroCarouselProps) {
           </CarouselContent>
           
           {/* Navigation buttons positioned at the middle of left and right edges */}
-          <motion.div 
-            className="absolute left-4 top-1/2 -translate-y-1/2 z-20"
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
-          >
-            <button 
-              onClick={scrollPrev}
-              className="flex items-center justify-center h-12 w-12 rounded-full bg-white/20 backdrop-blur-sm hover:bg-white hover:text-black transition-colors text-white border border-white/30"
-              aria-label="Previous slide"
-            >
-              <ChevronLeft className="h-6 w-6" />
-            </button>
-          </motion.div>
-          <motion.div 
-            className="absolute right-4 top-1/2 -translate-y-1/2 z-20"
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
-          >
-            <button 
-              onClick={scrollNext}
-              className="flex items-center justify-center h-12 w-12 rounded-full bg-white/20 backdrop-blur-sm hover:bg-white hover:text-black transition-colors text-white border border-white/30"
-              aria-label="Next slide"
-            >
-              <ChevronRight className="h-6 w-6" />
-            </button>
-          </motion.div>
+          {/* Removed navigation buttons as requested */}
           
           {/* Pagination Dots */}
           <div className="absolute bottom-8 left-0 right-0 flex justify-center gap-2 z-20">

@@ -24,7 +24,7 @@ export function ProductCard({
   isBestseller = false 
 }: ProductCardProps) {
   return (
-    <div className="bg-white rounded-2xl overflow-hidden group transition-all duration-500 relative flex flex-col h-full border border-gray-100">
+    <div className="bg-gray-50 rounded-2xl overflow-hidden group transition-all duration-500 relative flex flex-col h-full border border-gray-100 hover:bg-gray-100/50">
       {/* Bestseller badge */}
       {isBestseller && (
         <div className="absolute top-4 left-4 z-10">
@@ -35,7 +35,7 @@ export function ProductCard({
       )}
       
       {/* Product image */}
-      <div className="aspect-square bg-gray-50 relative overflow-hidden">
+      <div className="aspect-square bg-white relative overflow-hidden">
         {image ? (
           <>
             <Image
@@ -80,13 +80,13 @@ export function ProductCard({
           </div>
           
           {/* Add to cart button */}
-          <Button className="w-full bg-black hover:bg-black/90 text-white rounded-full py-6 h-10 text-sm font-medium transition-all duration-300 flex items-center justify-center gap-2">
+          <Button className="w-full bg-black hover:bg-black/90 text-white rounded-full py-6 h-10 text-sm font-medium transition-all duration-300 flex items-center justify-center gap-2 cursor-pointer">
             <span className="mr-1">Add to cart</span>
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="9" cy="21" r="1" />
-              <circle cx="20" cy="21" r="1" />
-              <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
-            </svg>
+                <circle cx="9" cy="21" r="1" />
+                <circle cx="20" cy="21" r="1" />
+                <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
+              </svg>
           </Button>
         </div>
       </div>

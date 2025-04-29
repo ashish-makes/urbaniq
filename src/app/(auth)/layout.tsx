@@ -1,9 +1,7 @@
-import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Bricolage_Grotesque } from "next/font/google";
-import { CustomCursor } from "@/components/CustomCursor";
 import { SmoothScroll } from "@/components/SmoothScroll";
-import "../../app/globals.css";
+import '../globals.css';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -20,20 +18,22 @@ const bricolage = Bricolage_Grotesque({
   subsets: ["latin"],
 });
 
-
-export default function RootLayout({
+export default function AuthLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} ${bricolage.variable} antialiased font-sans`}
+      <body 
+        className={`${geistSans.variable} ${geistMono.variable} ${bricolage.variable} font-sans bg-gray-50 min-h-screen flex flex-col`}
         suppressHydrationWarning
       >
-        <CustomCursor />
-        <SmoothScroll>{children}</SmoothScroll>
+        <SmoothScroll>
+          <main className="flex-1 flex items-center justify-center p-4">
+            {children}
+          </main>
+        </SmoothScroll>
       </body>
     </html>
   );

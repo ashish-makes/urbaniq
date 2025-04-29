@@ -1,10 +1,9 @@
-import './globals.css';
-import type { Metadata } from 'next';
-import { SmoothScroll } from '@/components/SmoothScroll';
-
-export const metadata: Metadata = {
-  title: 'UrbanIQ',
-  description: 'Smart Pet Tech',
+export const metadata = {
+  title: {
+    template: '%s | UrbanIQ',
+    default: 'UrbanIQ - Smart Pet Tech',
+  },
+  description: 'Innovative smart devices for modern pets',
 };
 
 export default function RootLayout({
@@ -12,11 +11,5 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return (
-    <html lang="en" suppressHydrationWarning>
-      <body suppressHydrationWarning>
-        <SmoothScroll>{children}</SmoothScroll>
-      </body>
-    </html>
-  );
+  return children;
 } 
