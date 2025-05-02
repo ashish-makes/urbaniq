@@ -10,6 +10,10 @@ export async function middleware(request: NextRequest) {
 
   // Get pathname of request
   const path = request.nextUrl.pathname;
+  
+  // Debug log
+  console.log('Token role:', token?.role);
+  console.log('Path:', path);
 
   // Redirect /admin to /admin/dashboard
   if (path === '/admin') {
@@ -47,6 +51,7 @@ export async function middleware(request: NextRequest) {
 
   // Protect admin routes from non-admin users
   if (token && isAdminRoute && token.role !== 'ADMIN') {
+    console.log('Access denied: User with role', token.role, 'tried to access admin route');
     return NextResponse.redirect(new URL('/user/dashboard', request.url));
   }
 

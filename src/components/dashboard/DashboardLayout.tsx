@@ -21,7 +21,13 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   // Check if the screen is mobile-sized
   useEffect(() => {
     const checkIfMobile = () => {
-      setIsMobile(window.innerWidth < 768); // 768px is the md breakpoint in Tailwind
+      const isMobileScreen = window.innerWidth < 768; // 768px is the md breakpoint in Tailwind
+      setIsMobile(isMobileScreen);
+      
+      // Auto-collapse sidebar on smaller screens
+      if (window.innerWidth < 1024 && !isCollapsed) {
+        setIsCollapsed(true);
+      }
     };
     
     // Initial check
@@ -32,7 +38,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     
     // Cleanup
     return () => window.removeEventListener('resize', checkIfMobile);
-  }, []);
+  }, [isCollapsed]);
+
+  // Handle manual sidebar toggle
+  const handleSidebarToggle = () => {
+    setIsCollapsed(!isCollapsed);
+  };
 
   // If the user is not authenticated, redirect to login
   if (status === 'unauthenticated') {
@@ -49,37 +60,38 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     );
   }
 
-  const sidebarWidth = isCollapsed ? 70 : 240;
-
   return (
-    <div className="relative h-screen overflow-hidden bg-gray-40">
+    <div className="relative h-screen flex bg-gray-50">
       {/* Only show the sidebar on desktop */}
-      <div className="hidden md:block fixed top-0 left-0 h-full z-20">
-        <Sidebar isCollapsed={isCollapsed} setIsCollapsed={setIsCollapsed} />
+      <div className="hidden md:block fixed top-0 left-0 h-full z-40">
+        <Sidebar 
+          isCollapsed={isCollapsed} 
+          setIsCollapsed={handleSidebarToggle} 
+        />
       </div>
       <motion.div 
-        className="flex flex-col h-full"
+        className="flex flex-col h-screen w-full"
         initial={false}
         animate={{ 
-          marginLeft: isMobile ? 0 : `${sidebarWidth}px`
+          marginLeft: isMobile ? 0 : (isCollapsed ? 70 : 240) 
         }}
         transition={{
           type: "spring",
-          stiffness: 300,
-          damping: 30
+          bounce: 0.15,
+          duration: 0.4
         }}
       >
-        <Header isCollapsed={isCollapsed} setIsCollapsed={setIsCollapsed} />
+        <Header isCollapsed={isCollapsed} setIsCollapsed={handleSidebarToggle} />
         <motion.main 
-          className="flex-1 overflow-y-auto p-6"
+          className="flex-1 overflow-y-auto overflow-x-hidden bg-gray-50"
           layout
           transition={{
             type: "spring",
-            stiffness: 300,
-            damping: 30
+            bounce: 0.15,
+            duration: 0.4
           }}
         >
-          <div className="container mx-auto px-0">
+          <div className="container mx-auto px-4 py-6">
             {children}
           </div>
         </motion.main>

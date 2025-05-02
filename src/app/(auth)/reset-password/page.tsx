@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft, Eye, EyeOff } from 'lucide-react';
@@ -30,7 +30,7 @@ const resetPasswordSchema = z.object({
 // Get the type from the schema
 type ResetPasswordFormValues = z.infer<typeof resetPasswordSchema>;
 
-export default function ResetPasswordPage() {
+function ResetPasswordContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get('token');
@@ -251,24 +251,42 @@ export default function ResetPasswordPage() {
                   )}
                 />
                 
-                <Button
-                  type="submit"
-                  className="w-full h-11 font-medium bg-black hover:bg-black/90 text-white rounded-full shadow-none focus:shadow-none"
+                <Button 
+                  type="submit" 
+                  className="w-full h-11 bg-black hover:bg-black/90 text-white rounded-full mt-4"
                   disabled={isLoading}
                 >
-                  {isLoading ? "Resetting Password..." : "Reset Password"}
+                  {isLoading ? (
+                    <span className="flex items-center">
+                      <div className="w-4 h-4 border-t-2 border-white rounded-full animate-spin mr-2"></div>
+                      Resetting Password...
+                    </span>
+                  ) : (
+                    "Reset Password"
+                  )}
                 </Button>
               </form>
             </Form>
           )}
         </CardContent>
-
-        <CardFooter className="flex justify-center space-x-4 p-0 mt-10 text-sm text-gray-500">
-          <Link href="/terms" className="hover:text-gray-800">Terms</Link>
-          <Link href="/privacy" className="hover:text-gray-800">Privacy</Link>
-          <Link href="/support" className="hover:text-gray-800">Support</Link>
-        </CardFooter>
       </Card>
     </div>
+  );
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen px-4 py-12">
+        <Card className="w-full max-w-md mx-auto border rounded-xl shadow-[0_4px_24px_rgba(0,0,0,0.03)] p-6">
+          <div className="flex items-center justify-center py-8">
+            <div className="w-8 h-8 border-t-2 border-black rounded-full animate-spin"></div>
+            <span className="ml-3 text-gray-700">Loading...</span>
+          </div>
+        </Card>
+      </div>
+    }>
+      <ResetPasswordContent />
+    </Suspense>
   );
 } 

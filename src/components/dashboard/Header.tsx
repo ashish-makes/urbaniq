@@ -1,10 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Menu, Bell, Search, X, User, Settings, LogOut, LayoutDashboard, Shield } from 'lucide-react';
+import { Menu, Bell, Search, X, User, Settings, LogOut, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -18,7 +18,6 @@ import {
 import { cn } from '@/lib/utils';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { Sidebar } from '@/components/dashboard/Sidebar';
-import { motion, AnimatePresence } from 'framer-motion';
 
 interface HeaderProps {
   isCollapsed: boolean;
@@ -29,7 +28,25 @@ export function Header({ isCollapsed, setIsCollapsed }: HeaderProps) {
   const { data: session } = useSession();
   const [showMobileSidebar, setShowMobileSidebar] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
   const pathname = usePathname();
+  
+  // Handle scroll effects
+  useEffect(() => {
+    const handleScroll = () => {
+      // Use a very small threshold to show shadow almost immediately
+      setIsScrolled(window.scrollY > 1);
+    };
+    
+    // Add scroll event listener
+    window.addEventListener('scroll', handleScroll);
+    
+    // Initial check
+    handleScroll();
+    
+    // Clean up
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
   
   // Get the current page title from the path
   const getPageTitle = () => {
@@ -38,22 +55,19 @@ export function Header({ isCollapsed, setIsCollapsed }: HeaderProps) {
     return currentPage.charAt(0).toUpperCase() + currentPage.slice(1);
   };
 
-  // Animation configuration matching parent
-  const springTransition = {
-    type: "spring",
-    stiffness: 300,
-    damping: 30
-  };
-
-  const handleLogout = async () => {
-    await signOut({ callbackUrl: '/' });
-  };
+  // Check if user is in admin section
+  const isInAdminSection = pathname.startsWith('/admin');
+  const isInUserSection = pathname.startsWith('/user');
 
   return (
-    <motion.header 
-      className="h-14 w-full flex items-center justify-between bg-white border-b border-gray-100 px-4"
-      layout
-      transition={springTransition}
+    <header 
+      className={cn(
+        "h-14 w-full flex items-center justify-between bg-white border-b border-gray-100 px-4 sticky top-0 z-50",
+        "transition-all duration-200",
+        isScrolled 
+          ? "shadow-[0_2px_15px_-5px_rgba(0,0,0,0.1)]" 
+          : "shadow-none"
+      )}
     >
       <div className="flex items-center gap-4">
         <Button 
@@ -66,18 +80,12 @@ export function Header({ isCollapsed, setIsCollapsed }: HeaderProps) {
           <Menu className="h-4 w-4 text-gray-600" />
         </Button>
         
-        <motion.h1 
-          className="font-medium tracking-tight"
-          layout
-        >
+        <h1 className="font-medium tracking-tight">
           <span className="font-semibold">{getPageTitle()}</span>
-        </motion.h1>
+        </h1>
       </div>
 
-      <motion.div 
-        className="flex items-center gap-3"
-        layout
-      >
+      <div className="flex items-center gap-3">
         {/* Search input - desktop */}
         <div className="relative hidden md:block">
           <div className="absolute inset-y-0 left-0 flex items-center pl-2.5 pointer-events-none">
@@ -116,32 +124,52 @@ export function Header({ isCollapsed, setIsCollapsed }: HeaderProps) {
           <DropdownMenuTrigger asChild>
             <Button 
               variant="ghost" 
-              className="h-8 rounded-full pl-1 pr-2 flex items-center gap-2 hover:bg-gray-50 relative"
+              className="h-8 rounded-full pl-1 pr-2 flex items-center gap-2 hover:bg-gray-50"
               aria-label="Open user menu"
             >
-              <Avatar className="h-6 w-6 border border-gray-100">
-                <AvatarImage src={session?.user?.image || ''} alt={session?.user?.name || 'User'} />
-                <AvatarFallback className="text-xs font-medium bg-primary/10 text-primary">
-                  {session?.user?.name
-                    ? session.user.name.charAt(0).toUpperCase()
-                    : 'U'}
-                </AvatarFallback>
-              </Avatar>
+              <div className="relative">
+                <Avatar className={cn(
+                  "h-6 w-6 border", 
+                  session?.user?.role === 'ADMIN' 
+                    ? "border-primary/40 ring-1 ring-primary/20" 
+                    : "border-gray-100"
+                )}>
+                  <AvatarImage src={session?.user?.image || ''} alt={session?.user?.name || 'User'} />
+                  <AvatarFallback className={cn(
+                    "text-xs font-medium", 
+                    session?.user?.role === 'ADMIN'
+                      ? "bg-primary/20 text-primary"
+                      : "bg-primary/10 text-primary"
+                  )}>
+                    {session?.user?.name
+                      ? session.user.name.charAt(0).toUpperCase()
+                      : 'U'}
+                  </AvatarFallback>
+                </Avatar>
+              </div>
               <span className="text-sm font-medium hidden sm:inline-block">
                 {session?.user?.name?.split(' ')[0] || 'User'}
+                {session?.user?.role === 'ADMIN' && (
+                  <span className="ml-1 text-xs text-primary font-medium">•</span>
+                )}
               </span>
-              
-              {/* Admin badge indicator */}
-              {session?.user?.role === 'ADMIN' && (
-                <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] text-white shadow-sm">A</span>
-              )}
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56 p-1.5">
             <div className="flex items-center gap-3 px-2 py-1.5">
-              <Avatar className="h-8 w-8 border border-gray-100">
+              <Avatar className={cn(
+                "h-8 w-8 border", 
+                session?.user?.role === 'ADMIN' 
+                  ? "border-primary/40 ring-1 ring-primary/20" 
+                  : "border-gray-100"
+              )}>
                 <AvatarImage src={session?.user?.image || ''} alt={session?.user?.name || 'User'} />
-                <AvatarFallback className="text-xs font-medium bg-primary/10 text-primary">
+                <AvatarFallback className={cn(
+                  "text-xs font-medium", 
+                  session?.user?.role === 'ADMIN'
+                    ? "bg-primary/20 text-primary"
+                    : "bg-primary/10 text-primary"
+                )}>
                   {session?.user?.name
                     ? session.user.name.charAt(0).toUpperCase()
                     : 'U'}
@@ -149,41 +177,40 @@ export function Header({ isCollapsed, setIsCollapsed }: HeaderProps) {
               </Avatar>
               <div>
                 <p className="text-sm font-medium leading-none">{session?.user?.name || 'User'}</p>
-                <p className="text-xs text-gray-500 mt-1">{session?.user?.email || ''}</p>
-                {session?.user?.role === 'ADMIN' && (
-                  <p className="text-xs font-medium text-primary mt-1">Administrator</p>
-                )}
+                <p className="text-xs text-gray-500 mt-1">
+                  {session?.user?.email || ''}
+                  {session?.user?.role === 'ADMIN' && (
+                    <span className="ml-1 text-red-500 font-medium">• Admin</span>
+                  )}
+                </p>
               </div>
             </div>
             <DropdownMenuSeparator className="my-1.5" />
-            
-            {/* Admin Portal Link - Show only to admin users in user dashboard */}
-            {session?.user?.role === 'ADMIN' && pathname.startsWith('/user') && (
-              <DropdownMenuItem asChild className="py-1.5">
-                <Link href="/admin/dashboard" className="cursor-pointer text-sm text-primary">
-                  <Shield className="mr-2.5 h-3.5 w-3.5 text-primary" />
-                  <span className="font-medium">Admin Portal</span>
-                </Link>
-              </DropdownMenuItem>
+            {session?.user?.role === 'ADMIN' && (
+              <>
+                {isInAdminSection ? (
+                  <DropdownMenuItem asChild className="py-1.5">
+                    <Link href="/user/dashboard" className="cursor-pointer text-sm">
+                      <User className="mr-2.5 h-3.5 w-3.5" />
+                      <span>User Dashboard</span>
+                    </Link>
+                  </DropdownMenuItem>
+                ) : (
+                  <DropdownMenuItem asChild className="py-1.5">
+                    <Link href="/admin/dashboard" className="cursor-pointer text-sm">
+                      <Shield className="mr-2.5 h-3.5 w-3.5 text-red-500" />
+                      <span>Admin Portal</span>
+                    </Link>
+                  </DropdownMenuItem>
+                )}
+              </>
             )}
-            
             <DropdownMenuItem asChild className="py-1.5">
               <Link href={session?.user?.role === 'ADMIN' ? '/admin/profile' : '/user/profile'} className="cursor-pointer text-sm">
                 <User className="mr-2.5 h-3.5 w-3.5" />
                 <span>Profile</span>
               </Link>
             </DropdownMenuItem>
-            
-            {/* For admin users in admin dashboard, offer quick link back to user dashboard */}
-            {session?.user?.role === 'ADMIN' && pathname.startsWith('/admin') && (
-              <DropdownMenuItem asChild className="py-1.5">
-                <Link href="/user/dashboard" className="cursor-pointer text-sm">
-                  <LayoutDashboard className="mr-2.5 h-3.5 w-3.5" />
-                  <span>User Dashboard</span>
-                </Link>
-              </DropdownMenuItem>
-            )}
-            
             <DropdownMenuItem asChild className="py-1.5">
               <Link href={session?.user?.role === 'ADMIN' ? '/admin/settings' : '/user/settings'} className="cursor-pointer text-sm">
                 <Settings className="mr-2.5 h-3.5 w-3.5" />
@@ -193,38 +220,30 @@ export function Header({ isCollapsed, setIsCollapsed }: HeaderProps) {
             <DropdownMenuSeparator className="my-1.5" />
             <DropdownMenuItem 
               className="text-sm cursor-pointer py-1.5 text-red-500 focus:text-red-500 focus:bg-red-50"
-              onClick={handleLogout}
+              onClick={() => signOut({ callbackUrl: '/' })}
             >
               <LogOut className="mr-2.5 h-3.5 w-3.5" />
               <span>Logout</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-      </motion.div>
+      </div>
 
       {/* Mobile search input */}
-      <AnimatePresence>
-        {showSearch && (
-          <motion.div 
-            className="absolute inset-x-0 top-14 z-50 border-b border-gray-100 bg-white p-3 md:hidden"
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.2 }}
-          >
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                <Search className="h-3.5 w-3.5 text-gray-400" />
-              </div>
-              <Input
-                placeholder="Search..."
-                className="w-full h-8 rounded-full bg-gray-50 border-none pl-8 text-sm focus-visible:ring-1 focus-visible:ring-primary/20 shadow-none"
-                autoFocus
-              />
+      {showSearch && (
+        <div className="absolute inset-x-0 top-14 z-50 border-b border-gray-100 bg-white p-3 md:hidden">
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+              <Search className="h-3.5 w-3.5 text-gray-400" />
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            <Input
+              placeholder="Search..."
+              className="w-full h-8 rounded-full bg-gray-50 border-none pl-8 text-sm focus-visible:ring-1 focus-visible:ring-primary/20 shadow-none"
+              autoFocus
+            />
+          </div>
+        </div>
+      )}
 
       {/* Mobile sidebar */}
       <Sheet open={showMobileSidebar} onOpenChange={setShowMobileSidebar}>
@@ -236,6 +255,5 @@ export function Header({ isCollapsed, setIsCollapsed }: HeaderProps) {
           />
         </SheetContent>
       </Sheet>
-    </motion.header>
-  );
-} 
+    </header>
+  );} 

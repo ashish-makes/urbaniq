@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
@@ -21,7 +21,7 @@ const verifySchema = z.object({
 // Get the type from the schema
 type VerifyFormValues = z.infer<typeof verifySchema>;
 
-export default function VerifyPage() {
+function VerifyContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const email = searchParams.get('email');
@@ -219,5 +219,22 @@ export default function VerifyPage() {
         </CardFooter>
       </Card>
     </div>
+  );
+}
+
+export default function VerifyPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen px-4 py-12">
+        <Card className="w-full max-w-md mx-auto border rounded-xl shadow-[0_4px_24px_rgba(0,0,0,0.03)] p-6">
+          <div className="flex items-center justify-center py-8">
+            <div className="w-8 h-8 border-t-2 border-black rounded-full animate-spin"></div>
+            <span className="ml-3 text-gray-700">Loading...</span>
+          </div>
+        </Card>
+      </div>
+    }>
+      <VerifyContent />
+    </Suspense>
   );
 } 

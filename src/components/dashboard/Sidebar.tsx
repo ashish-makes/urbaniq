@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
 import { cn } from '@/lib/utils';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   ChevronLeft,
   LayoutDashboard,
@@ -19,7 +20,6 @@ import {
   Store
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { motion, AnimatePresence } from 'framer-motion';
 
 interface SidebarProps {
   isCollapsed: boolean;
@@ -107,48 +107,52 @@ export function Sidebar({ isCollapsed, setIsCollapsed, isMobile = false }: Sideb
 
   const routes = isAdmin ? adminRoutes : userRoutes;
 
-  // Animation configuration matching parent
-  const springTransition = {
-    type: "spring",
-    stiffness: 300,
-    damping: 30
+  // Debug log for session state
+  console.log('Sidebar - session user:', session?.user);
+  console.log('Sidebar - isAdmin:', isAdmin);
+
+  // Animation variants
+  const sidebarVariants = {
+    expanded: { width: "240px" },
+    collapsed: { width: "70px" }
   };
 
-  const handleLogout = async () => {
-    await signOut({ callbackUrl: '/' });
+  const textVariants = {
+    expanded: { opacity: 1, display: "block" },
+    collapsed: { 
+      opacity: 0, 
+      display: "none",
+      transition: { 
+        display: { delay: 0.15 } 
+      }
+    }
+  };
+
+  const chevronVariants = {
+    expanded: { rotate: 0 },
+    collapsed: { rotate: 180 }
   };
 
   return (
     <motion.div
-      className="flex h-full flex-col border-r border-gray-800 bg-black py-3"
       initial={false}
-      animate={{
-        width: isMobile ? "100%" : (isCollapsed ? 70 : 240),
-      }}
-      transition={springTransition}
-      layout
+      animate={isCollapsed && !isMobile ? "collapsed" : "expanded"}
+      variants={sidebarVariants}
+      transition={{ type: "spring", bounce: 0.15, duration: 0.4 }}
+      className={cn(
+        "flex h-full flex-col border-r border-zinc-900 bg-black py-3",
+        // Only apply mobile-specific classes
+        isMobile && "w-full"
+      )}
     >
-      <motion.div 
-        className={cn(
-          "flex w-full items-center px-4", 
-          isMobile ? "justify-between" : (isCollapsed ? "justify-center" : "justify-between")
+      <div className="flex w-full items-center justify-between px-4">
+        {!isCollapsed || isMobile ? (
+          <span className="text-lg font-semibold text-white">
+            Urban<span className="text-blue-500 font-bold">IQ</span>
+          </span>
+        ) : (
+          <span className="text-lg font-semibold text-white opacity-0">.</span>
         )}
-        layout
-      >
-        <AnimatePresence mode="wait">
-          {(isMobile || !isCollapsed) && (
-            <motion.span 
-              key="logo"
-              className="text-lg font-semibold text-white"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-            >
-              Urban<span className="text-blue-400">IQ</span>
-            </motion.span>
-          )}
-        </AnimatePresence>
         
         {/* Only show collapse button on desktop */}
         {!isMobile && (
@@ -156,23 +160,20 @@ export function Sidebar({ isCollapsed, setIsCollapsed, isMobile = false }: Sideb
             variant="ghost"
             size="icon"
             onClick={() => setIsCollapsed(!isCollapsed)}
-            className="h-8 w-8 text-gray-400 hover:text-white hover:bg-gray-800"
+            className="h-8 w-8 text-gray-400 hover:text-white hover:bg-zinc-900"
             aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
             <motion.div
               animate={{ rotate: isCollapsed ? 180 : 0 }}
-              transition={{ duration: 0.3 }}
+              transition={{ type: "spring", bounce: 0.15, duration: 0.4 }}
             >
               <ChevronLeft className="h-4 w-4" />
             </motion.div>
           </Button>
         )}
-      </motion.div>
+      </div>
 
-      <motion.div 
-        className="mt-4 w-full space-y-1 px-2"
-        layout
-      >
+      <div className="mt-4 w-full space-y-1 px-2">
         {routes.map((route) => {
           const isActive = pathname === route.href;
           const Icon = route.icon;
@@ -185,94 +186,37 @@ export function Sidebar({ isCollapsed, setIsCollapsed, isMobile = false }: Sideb
                 "flex h-9 items-center rounded-md px-3 text-sm transition-colors",
                 !isMobile && isCollapsed && "justify-center px-0",
                 isActive
-                  ? "bg-gray-900 text-white font-medium"
-                  : "text-gray-400 hover:text-white hover:bg-gray-900"
+                  ? "bg-zinc-900 text-white font-medium"
+                  : "text-gray-400 hover:text-white hover:bg-zinc-900"
               )}
               title={!isMobile && isCollapsed ? route.title : undefined}
             >
-              <motion.div
-                className="flex items-center"
-                animate={{ 
-                  justifyContent: !isMobile && isCollapsed ? "center" : "flex-start",
-                  width: "100%"
-                }}
-                transition={springTransition}
-              >
-                <Icon className="h-4 w-4 flex-shrink-0" />
-                <AnimatePresence mode="wait">
-                  {(isMobile || !isCollapsed) && (
-                    <motion.span
-                      key={`text-${route.title}`}
-                      className="ml-3"
-                      initial={{ opacity: 0, width: 0, marginLeft: 0 }}
-                      animate={{ 
-                        opacity: 1,
-                        width: "auto",
-                        marginLeft: 12
-                      }}
-                      exit={{ 
-                        opacity: 0,
-                        width: 0,
-                        marginLeft: 0
-                      }}
-                      transition={{ duration: 0.2 }}
-                    >
-                      {route.title}
-                    </motion.span>
-                  )}
-                </AnimatePresence>
-              </motion.div>
+              <Icon className={cn(
+                "h-4 w-4", 
+                !isMobile && isCollapsed ? "mx-auto" : "mr-3"
+              )} />
+              {(!isCollapsed || isMobile) && <span>{route.title}</span>}
             </Link>
           );
         })}
-      </motion.div>
+      </div>
 
-      <motion.div 
-        className="mt-auto w-full px-2 mb-2"
-        layout
-      >
+      <div className="mt-auto w-full px-2 mb-2">
         <button
           className={cn(
-            "flex h-9 w-full items-center rounded-md px-3 text-sm text-gray-400 transition-colors hover:bg-gray-800 hover:text-white",
+            "flex h-9 w-full items-center rounded-md px-3 text-sm text-gray-400 transition-colors hover:bg-zinc-900 hover:text-white",
             !isMobile && isCollapsed && "justify-center px-0"
           )}
           title={!isMobile && isCollapsed ? "Logout" : undefined}
-          onClick={handleLogout}
+          onClick={() => signOut({ callbackUrl: '/' })}
         >
-          <motion.div
-            className="flex items-center"
-            animate={{ 
-              justifyContent: !isMobile && isCollapsed ? "center" : "flex-start",
-              width: "100%" 
-            }}
-            transition={springTransition}
-          >
-            <LogOut className="h-4 w-4 flex-shrink-0" />
-            <AnimatePresence mode="wait">
-              {(isMobile || !isCollapsed) && (
-                <motion.span
-                  key="logout-text"
-                  className="ml-3"
-                  initial={{ opacity: 0, width: 0, marginLeft: 0 }}
-                  animate={{ 
-                    opacity: 1,
-                    width: "auto",
-                    marginLeft: 12
-                  }}
-                  exit={{ 
-                    opacity: 0,
-                    width: 0,
-                    marginLeft: 0
-                  }}
-                  transition={{ duration: 0.2 }}
-                >
-                  Logout
-                </motion.span>
-              )}
-            </AnimatePresence>
-          </motion.div>
+          <LogOut className={cn(
+            "h-4 w-4", 
+            !isMobile && isCollapsed ? "mx-auto" : "mr-3"
+          )} />
+          {(!isCollapsed || isMobile) && <span>Logout</span>}
         </button>
-      </motion.div>
+      </div>
     </motion.div>
   );
 } 
