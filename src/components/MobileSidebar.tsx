@@ -2,10 +2,11 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, Menu } from "lucide-react";
+import { ArrowRight, Menu, User, LogOut, Settings, LayoutDashboard } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { motion, AnimatePresence } from "framer-motion";
+import { useSession, signOut } from "next-auth/react";
 
 // Regular menu link for subcategories with animation
 const MenuLink = ({ href, children, index }: { href: string; children: React.ReactNode; index: number }) => (
@@ -25,6 +26,14 @@ const MenuLink = ({ href, children, index }: { href: string; children: React.Rea
 
 // Mobile menu links component with accordion categories
 const MobileMenuLinks = () => {
+  const { data: session, status } = useSession();
+  const isAdmin = session?.user?.role === "ADMIN";
+  const isAuthenticated = status === "authenticated";
+
+  const handleSignOut = () => {
+    signOut({ callbackUrl: '/' });
+  };
+
   return (
     <div className="flex flex-col">
       <Accordion 
@@ -87,29 +96,68 @@ const MobileMenuLinks = () => {
         <ArrowRight size={16} className="text-gray-400 group-hover:-rotate-45 transition-transform duration-300 ease-in-out" />
       </Link>
       
-      <div className="pt-10 flex flex-row gap-3">
-        <Link href="/login" className="flex-1">
-          <div className="group inline-flex items-center justify-center py-2 pl-4 pr-3 rounded-full bg-white text-black border border-gray-200 hover:bg-gray-50 transition-all font-bricolage text-sm w-full">
-            <span className="mr-1.5">Log in</span>
-            <div className="bg-black rounded-full p-1 flex items-center justify-center ml-auto">
-              <div className="w-[12px] h-[12px] group-hover:-rotate-45 transition-transform duration-300 ease-in-out">
-                <ArrowRight size={12} stroke="white" strokeWidth={2} />
-              </div>
-            </div>
+      {/* Show user menu or login/signup buttons based on authentication status */}
+      {isAuthenticated ? (
+        <div className="pt-10 flex flex-col gap-3">
+          <div className="px-1 py-2 text-base font-medium text-gray-700">
+            {session?.user?.name || 'User'}
           </div>
-        </Link>
 
-        <Link href="/signup" className="flex-1">
-          <div className="group inline-flex items-center justify-center py-2 pl-4 pr-3 rounded-full bg-black text-white hover:bg-black/90 transition-all font-bricolage text-sm w-full">
-            <span className="mr-1.5">Sign up</span>
-            <div className="bg-white rounded-full p-1 flex items-center justify-center ml-auto">
-              <div className="w-[12px] h-[12px] group-hover:-rotate-45 transition-transform duration-300 ease-in-out">
-                <ArrowRight size={12} stroke="black" strokeWidth={2} />
+          {isAdmin && (
+            <Link href="/admin/dashboard" className="flex items-center py-3 px-1 text-gray-700 hover:text-black transition-colors">
+              <LayoutDashboard className="mr-3 h-4 w-4" />
+              <span>Admin Dashboard</span>
+            </Link>
+          )}
+
+          <Link href={isAdmin ? "/admin/dashboard" : "/user/dashboard"} className="flex items-center py-3 px-1 text-gray-700 hover:text-black transition-colors">
+            <LayoutDashboard className="mr-3 h-4 w-4" />
+            <span>Dashboard</span>
+          </Link>
+
+          <Link href={isAdmin ? "/admin/profile" : "/user/profile"} className="flex items-center py-3 px-1 text-gray-700 hover:text-black transition-colors">
+            <User className="mr-3 h-4 w-4" />
+            <span>Profile</span>
+          </Link>
+
+          <Link href={isAdmin ? "/admin/settings" : "/user/settings"} className="flex items-center py-3 px-1 text-gray-700 hover:text-black transition-colors">
+            <Settings className="mr-3 h-4 w-4" />
+            <span>Settings</span>
+          </Link>
+
+          <button 
+            onClick={handleSignOut}
+            className="flex items-center py-3 px-1 text-gray-700 hover:text-black transition-colors"
+          >
+            <LogOut className="mr-3 h-4 w-4" />
+            <span>Log out</span>
+          </button>
+        </div>
+      ) : (
+        <div className="pt-10 flex flex-row gap-3">
+          <Link href="/login" className="flex-1">
+            <div className="group inline-flex items-center justify-center py-2 pl-4 pr-3 rounded-full bg-white text-black border border-gray-200 hover:bg-gray-50 transition-all font-bricolage text-sm w-full">
+              <span className="mr-1.5">Log in</span>
+              <div className="bg-black rounded-full p-1 flex items-center justify-center ml-auto">
+                <div className="w-[12px] h-[12px] group-hover:-rotate-45 transition-transform duration-300 ease-in-out">
+                  <ArrowRight size={12} stroke="white" strokeWidth={2} />
+                </div>
               </div>
             </div>
-          </div>
-        </Link>
-      </div>
+          </Link>
+
+          <Link href="/signup" className="flex-1">
+            <div className="group inline-flex items-center justify-center py-2 pl-4 pr-3 rounded-full bg-black text-white hover:bg-black/90 transition-all font-bricolage text-sm w-full">
+              <span className="mr-1.5">Sign up</span>
+              <div className="bg-white rounded-full p-1 flex items-center justify-center ml-auto">
+                <div className="w-[12px] h-[12px] group-hover:-rotate-45 transition-transform duration-300 ease-in-out">
+                  <ArrowRight size={12} stroke="black" strokeWidth={2} />
+                </div>
+              </div>
+            </div>
+          </Link>
+        </div>
+      )}
     </div>
   );
 };

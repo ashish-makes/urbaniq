@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, ChevronDown, Search } from "lucide-react";
+import { ArrowRight, ChevronDown, Search, User, LogOut, Settings, LayoutDashboard } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,6 +13,8 @@ import { Input } from "@/components/ui/input";
 import { useEffect, useState } from "react";
 import { CartSidebar } from "@/components/CartSidebar";
 import { MobileSidebar } from "@/components/MobileSidebar";
+import { useSession, signOut } from "next-auth/react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 // Custom link component without animation
 const AnimatedLink = ({ href, children }: { href: string; children: React.ReactNode }) => {
@@ -27,6 +29,10 @@ const AnimatedLink = ({ href, children }: { href: string; children: React.ReactN
 };
 
 export function Header() {
+  const { data: session, status } = useSession();
+  const isAdmin = session?.user?.role === "ADMIN";
+  const isAuthenticated = status === "authenticated";
+  
   const placeholders = [
     "Search pet tech...",
     "Find smart feeders...",
@@ -87,6 +93,10 @@ export function Header() {
   useEffect(() => {
     setCurrentPlaceholder(typingText);
   }, [typingText]);
+
+  const handleSignOut = () => {
+    signOut({ callbackUrl: '/' });
+  };
 
   return (
     <header className={`py-2 px-3 sticky top-0 z-50 bg-white/90 backdrop-blur-md transition-shadow duration-400 ${scrolled ? 'shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)]' : ''}`}>
@@ -205,28 +215,90 @@ export function Header() {
             {/* Desktop Cart */}
             <CartSidebar />
 
+            {/* Authentication UI */}
             <div className="flex items-center space-x-2">
-              <Link href="/login">
-                <div className="group inline-flex items-center justify-center py-1.5 pl-3 pr-2 rounded-full bg-white text-black border border-gray-200 hover:bg-gray-50 transition-all font-bricolage text-xs">
-                  <span className="mr-1.5">Log in</span>
-                  <div className="bg-black rounded-full p-1 flex items-center justify-center">
-                    <div className="w-[12px] h-[12px] group-hover:-rotate-45 transition-transform duration-300 ease-in-out">
-                      <ArrowRight size={12} stroke="white" strokeWidth={2} />
+              {isAuthenticated ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger className="flex items-center gap-1.5 focus:outline-none">
+                    <Avatar className="h-6 w-6">
+                      <AvatarImage src={session?.user?.image || ''} alt={session?.user?.name || 'User'} />
+                      <AvatarFallback className="bg-gray-100 text-gray-700 text-xs">
+                        {session?.user?.name?.charAt(0) || 'U'}
+                      </AvatarFallback>
+                    </Avatar>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <div className="px-2 py-2 text-sm font-medium text-gray-700">
+                      {session?.user?.name || 'User'}
                     </div>
-                  </div>
-                </div>
-              </Link>
+                    <DropdownMenuSeparator />
+                    
+                    {isAdmin && (
+                      <>
+                        <DropdownMenuItem asChild>
+                          <Link href="/admin/dashboard" className="w-full cursor-pointer">
+                            <LayoutDashboard className="mr-2 h-4 w-4" />
+                            Admin Dashboard
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                      </>
+                    )}
+                    
+                    <DropdownMenuItem asChild>
+                      <Link href={isAdmin ? "/admin/dashboard" : "/user/dashboard"} className="w-full cursor-pointer">
+                        <LayoutDashboard className="mr-2 h-4 w-4" />
+                        Dashboard
+                      </Link>
+                    </DropdownMenuItem>
+                    
+                    <DropdownMenuItem asChild>
+                      <Link href={isAdmin ? "/admin/profile" : "/user/profile"} className="w-full cursor-pointer">
+                        <User className="mr-2 h-4 w-4" />
+                        Profile
+                      </Link>
+                    </DropdownMenuItem>
+                    
+                    <DropdownMenuItem asChild>
+                      <Link href={isAdmin ? "/admin/settings" : "/user/settings"} className="w-full cursor-pointer">
+                        <Settings className="mr-2 h-4 w-4" />
+                        Settings
+                      </Link>
+                    </DropdownMenuItem>
+                    
+                    <DropdownMenuSeparator />
+                    
+                    <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer">
+                      <LogOut className="mr-2 h-4 w-4" />
+                      <span>Log out</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <>
+                  <Link href="/login">
+                    <div className="group inline-flex items-center justify-center py-1.5 pl-3 pr-2 rounded-full bg-white text-black border border-gray-200 hover:bg-gray-50 transition-all font-bricolage text-xs">
+                      <span className="mr-1.5">Log in</span>
+                      <div className="bg-black rounded-full p-1 flex items-center justify-center">
+                        <div className="w-[12px] h-[12px] group-hover:-rotate-45 transition-transform duration-300 ease-in-out">
+                          <ArrowRight size={12} stroke="white" strokeWidth={2} />
+                        </div>
+                      </div>
+                    </div>
+                  </Link>
 
-              <Link href="/signup">
-                <div className="group inline-flex items-center justify-center py-1.5 pl-3 pr-2 rounded-full bg-black text-white hover:bg-black/90 transition-all font-bricolage text-xs">
-                  <span className="mr-1.5">Sign up</span>
-                  <div className="bg-white rounded-full p-1 flex items-center justify-center">
-                    <div className="w-[12px] h-[12px] group-hover:-rotate-45 transition-transform duration-300 ease-in-out">
-                      <ArrowRight size={12} stroke="black" strokeWidth={2} />
+                  <Link href="/signup">
+                    <div className="group inline-flex items-center justify-center py-1.5 pl-3 pr-2 rounded-full bg-black text-white hover:bg-black/90 transition-all font-bricolage text-xs">
+                      <span className="mr-1.5">Sign up</span>
+                      <div className="bg-white rounded-full p-1 flex items-center justify-center">
+                        <div className="w-[12px] h-[12px] group-hover:-rotate-45 transition-transform duration-300 ease-in-out">
+                          <ArrowRight size={12} stroke="black" strokeWidth={2} />
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
-              </Link>
+                  </Link>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -245,6 +317,70 @@ export function Header() {
           </div>
           {/* Mobile Cart */}
           <CartSidebar />
+          
+          {/* Mobile authentication */}
+          {isAuthenticated ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger className="focus:outline-none">
+                <Avatar className="h-6 w-6">
+                  <AvatarImage src={session?.user?.image || ''} alt={session?.user?.name || 'User'} />
+                  <AvatarFallback className="bg-gray-100 text-gray-700 text-xs">
+                    {session?.user?.name?.charAt(0) || 'U'}
+                  </AvatarFallback>
+                </Avatar>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <div className="px-2 py-2 text-sm font-medium text-gray-700">
+                  {session?.user?.name || 'User'}
+                </div>
+                <DropdownMenuSeparator />
+                
+                {isAdmin && (
+                  <>
+                    <DropdownMenuItem asChild>
+                      <Link href="/admin/dashboard" className="w-full cursor-pointer">
+                        <LayoutDashboard className="mr-2 h-4 w-4" />
+                        Admin Dashboard
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                  </>
+                )}
+                
+                <DropdownMenuItem asChild>
+                  <Link href={isAdmin ? "/admin/dashboard" : "/user/dashboard"} className="w-full cursor-pointer">
+                    <LayoutDashboard className="mr-2 h-4 w-4" />
+                    Dashboard
+                  </Link>
+                </DropdownMenuItem>
+                
+                <DropdownMenuItem asChild>
+                  <Link href={isAdmin ? "/admin/profile" : "/user/profile"} className="w-full cursor-pointer">
+                    <User className="mr-2 h-4 w-4" />
+                    Profile
+                  </Link>
+                </DropdownMenuItem>
+                
+                <DropdownMenuItem asChild>
+                  <Link href={isAdmin ? "/admin/settings" : "/user/settings"} className="w-full cursor-pointer">
+                    <Settings className="mr-2 h-4 w-4" />
+                    Settings
+                  </Link>
+                </DropdownMenuItem>
+                
+                <DropdownMenuSeparator />
+                
+                <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer">
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Log out</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <Link href="/login">
+              <User size={20} className="text-gray-700" />
+            </Link>
+          )}
         </div>
       </div>
     </header>

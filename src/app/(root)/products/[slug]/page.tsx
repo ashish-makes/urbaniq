@@ -418,26 +418,84 @@ export default function ProductDetailPage() {
   const [carouselApi, setCarouselApi] = useState<CarouselApi>();
   const [currentSlide, setCurrentSlide] = useState(0);
   const [autoplayProgress, setAutoplayProgress] = useState(0);
+  const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
   // Auto-scroll duration in milliseconds
   const autoplayDuration = 5000;
 
   useEffect(() => {
-    // Find the product by slug from the data
-    // In a real application, this would be a fetch request to an API
-    const productSlug = Array.isArray(slug) ? slug[0] : slug;
-    const foundProduct = productsData.find(p => p.slug === productSlug);
-    
-    // Simulate loading delay
-    setTimeout(() => {
-      if (foundProduct) {
-        setProduct(foundProduct);
-        setSelectedColor(foundProduct.colors?.[0] || '');
-      } else {
+    const fetchProduct = async () => {
+      setIsLoading(true);
+      try {
+        // Get the slug from params
+        const productSlug = Array.isArray(slug) ? slug[0] : slug;
+        
+        // Fetch product data from the API
+        const response = await fetch(`/api/products/${productSlug}`);
+        
+        if (!response.ok) {
+          console.error('Error fetching product:', response.statusText);
+          setProduct(null);
+          setIsLoading(false);
+          return;
+        }
+        
+        const productData = await response.json();
+        
+        // Process the data to match our Product interface
+        if (productData) {
+          // Add default values for fields that might be missing
+          const processedProduct: Product = {
+            ...productData,
+            // Ensure reviews exist or set to empty array
+            reviews: productData.reviews || [],
+            // Set default color if available
+            colors: productData.colors || [],
+            // Ensure other required fields have defaults
+            rating: productData.rating || 0,
+            reviewCount: productData.reviewCount || 0,
+            longDescription: productData.longDescription || productData.description,
+            features: productData.features || [],
+            specs: productData.specs || {}
+          };
+          
+          setProduct(processedProduct);
+          
+          if (processedProduct.colors && processedProduct.colors.length > 0) {
+            setSelectedColor(processedProduct.colors[0]);
+          }
+          
+          // Fetch related products (from same category)
+          fetchRelatedProducts(processedProduct.category);
+        } else {
+          setProduct(null);
+        }
+      } catch (error) {
+        console.error('Error:', error);
         setProduct(null);
+      } finally {
+        setIsLoading(false);
       }
-      setIsLoading(false);
-    }, 300);
+    };
+    
+    fetchProduct();
   }, [slug]);
+  
+  // Fetch related products
+  const fetchRelatedProducts = async (category: string) => {
+    try {
+      const response = await fetch(`/api/products?category=${category}`);
+      if (response.ok) {
+        const products = await response.json();
+        // Filter out current product and limit to 4
+        const filtered = products
+          .filter((p: Product) => p.slug !== (Array.isArray(slug) ? slug[0] : slug))
+          .slice(0, 4);
+        setRelatedProducts(filtered);
+      }
+    } catch (error) {
+      console.error('Error fetching related products:', error);
+    }
+  };
 
   // Handle scroll to show/hide fixed buttons
   useEffect(() => {
@@ -513,28 +571,10 @@ export default function ProductDetailPage() {
     }
   };
 
-  // Related products (excluding current product)
-  const relatedProducts = productsData
-    .filter(p => p.slug !== product?.slug)
-    .slice(0, 4);
-    
-  // Get all products for the carousel (excluding current product)
-  const carouselProducts = productsData.filter(p => p.slug !== product?.slug);
-  
-  // Ensure we have 6 products for the carousel by duplicating if necessary
-  const displayProducts = [...carouselProducts];
-  if (displayProducts.length < 6) {
-    // Add duplicates until we reach 6 products
-    const duplicatesNeeded = 6 - displayProducts.length;
-    for (let i = 0; i < duplicatesNeeded; i++) {
-      // Create a shallow copy with a modified id to avoid key conflicts
-      const duplicateProduct = {
-        ...carouselProducts[i % carouselProducts.length],
-        id: carouselProducts[i % carouselProducts.length].id + `-duplicate-${i + 1}`
-      };
-      displayProducts.push(duplicateProduct);
-    }
-  }
+  // Get display products for the carousel
+  const displayProducts = relatedProducts.length > 0 
+    ? relatedProducts 
+    : productsData.filter(p => p.slug !== (Array.isArray(slug) ? slug[0] : slug)).slice(0, 4);
 
   const handleShare = (platform: string) => {
     const url = window.location.href;
