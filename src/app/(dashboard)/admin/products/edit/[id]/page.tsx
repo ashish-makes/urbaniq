@@ -29,11 +29,13 @@ import {
   Package,
   DollarSign,
   Palette,
-  Settings
+  Settings,
+  Info
 } from 'lucide-react';
 import { toast } from 'sonner';
 import Link from 'next/link';
 import Image from 'next/image';
+import { optimizeImages } from '@/lib/image-optimization';
 
 interface Product {
   id: string;
@@ -176,41 +178,55 @@ export default function EditProductPage() {
     setFormData({ ...formData, [name]: checked });
   };
 
-  const handleImagesUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImagesUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
-    const newImageFiles = [...(formData.imageFiles || [])];
-    const newPreviewImages = [...previewImages];
+    // Show loading toast
+    const loadingToast = toast.loading('Processing images...');
 
-    Array.from(files).forEach(file => {
-      // Check file size (limit to 5MB)
-      if (file.size > 5 * 1024 * 1024) {
-        toast.error(`Image ${file.name} is larger than 5MB`);
-        return;
-      }
+    try {
+      const newImageFiles = [...(formData.imageFiles || [])];
+      const newPreviewImages = [...previewImages];
 
-      // Check file type
-      if (!file.type.match('image.*')) {
-        toast.error(`${file.name} is not an image file`);
-        return;
-      }
+      // Create preview immediately for better UX
+      Array.from(files).forEach(file => {
+        // Check file type
+        if (!file.type.match('image.*')) {
+          toast.error(`${file.name} is not an image file`);
+          return;
+        }
 
-      // Create preview
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        newPreviewImages.push(event.target?.result as string);
-        setPreviewImages([...newPreviewImages]);
-      };
-      reader.readAsDataURL(file);
+        // Check file size (limit to 10MB for original)
+        if (file.size > 10 * 1024 * 1024) {
+          toast.error(`Image ${file.name} is larger than 10MB`);
+          return;
+        }
 
-      newImageFiles.push(file);
-    });
+        // Create preview
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          newPreviewImages.push(event.target?.result as string);
+          setPreviewImages([...newPreviewImages]);
+        };
+        reader.readAsDataURL(file);
 
-    setFormData({
-      ...formData,
-      imageFiles: newImageFiles
-    });
+        // Add file to array (will be optimized before upload)
+        newImageFiles.push(file);
+      });
+
+      setFormData({
+        ...formData,
+        imageFiles: newImageFiles
+      });
+
+      toast.dismiss(loadingToast);
+      toast.success('Images added successfully');
+    } catch (error) {
+      console.error('Error processing images:', error);
+      toast.dismiss(loadingToast);
+      toast.error('Failed to process images');
+    }
   };
 
   const removeNewImage = (index: number) => {
@@ -307,14 +323,30 @@ export default function EditProductPage() {
     }
 
     setIsSubmitting(true);
+    let optimizedImages: File[] = [];
+
+    // Format specs object
+    const specs: Record<string, string> = {};
+    specFields.forEach(spec => {
+      if (spec.key.trim() && spec.value.trim()) {
+        specs[spec.key] = spec.value;
+      }
+    });
 
     try {
+      // Optimize images if there are new ones
+      if (formData.imageFiles && formData.imageFiles.length > 0) {
+        const optimizationToast = toast.loading('Optimizing images...');
+        optimizedImages = await optimizeImages(formData.imageFiles);
+        toast.dismiss(optimizationToast);
+      }
+      
       // Create FormData object to send to the API
       const data = new FormData();
       data.append('id', formData.id);
       data.append('name', formData.name);
       data.append('description', formData.description);
-      data.append('longDescription', formData.longDescription);
+      data.append('longDescription', formData.longDescription || '');
       data.append('price', String(formData.price));
       
       if (formData.originalPrice) {
@@ -330,32 +362,21 @@ export default function EditProductPage() {
       data.append('freeShipping', String(formData.freeShipping));
       data.append('featured', String(formData.featured));
       
-      // Add existing images
-      data.append('existingImages', JSON.stringify(existingImages));
-      
       // Add arrays and objects as JSON strings
       data.append('features', JSON.stringify(formData.features.filter(f => f.trim() !== '')));
       data.append('colors', JSON.stringify(formData.colors.filter(c => c.trim() !== '')));
       data.append('tags', JSON.stringify(formData.tags.filter(t => t.trim() !== '')));
-      
-      // Format specs object
-      const specs: Record<string, string> = {};
-      specFields.forEach(spec => {
-        if (spec.key.trim() && spec.value.trim()) {
-          specs[spec.key] = spec.value;
-        }
-      });
       data.append('specs', JSON.stringify(specs));
       
-      // Append all new image files
-      if (formData.imageFiles && formData.imageFiles.length > 0) {
-        formData.imageFiles.forEach(file => {
-          data.append('images', file);
-        });
-      }
+      // Add existing images
+      data.append('existingImages', JSON.stringify(existingImages));
+      
+      // Append all optimized image files
+      optimizedImages.forEach(file => {
+        data.append('images', file);
+      });
 
-      // Send update request
-      const response = await fetch('/api/admin/products', {
+      const response = await fetch(`/api/admin/products?id=${formData.id}`, {
         method: 'PUT',
         body: data,
       });
@@ -776,8 +797,22 @@ export default function EditProductPage() {
             </div>
 
             {/* Images Upload Card */}
-            <div className="border bg-white p-4 rounded-lg">
-              <h2 className="text-md font-medium mb-3">Product Images</h2>
+            <div className="border rounded-lg p-5 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <Upload className="h-4 w-4 text-primary mr-2" />
+                  <h3 className="text-sm font-medium">Product Images</h3>
+                </div>
+              </div>
+              
+              <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3 flex items-start space-x-2">
+                <Info className="h-4 w-4 text-yellow-600 mt-0.5 flex-shrink-0" />
+                <div className="text-xs text-yellow-800">
+                  <p>Images will be automatically optimized before upload to improve performance and reduce bandwidth usage.</p>
+                  <p className="mt-1">High-resolution images will be resized to a maximum of 1200px width/height and compressed to reduce file size.</p>
+                </div>
+              </div>
+              
               <div className="space-y-3">
                 <Label className="text-sm">Current Images</Label>
                 
@@ -833,7 +868,7 @@ export default function EditProductPage() {
                 
                 <div className="flex flex-col items-center justify-center border border-dashed p-3 rounded-lg">
                   <Upload className="mb-1 h-5 w-5 text-gray-400" />
-                  <p className="text-xs text-center text-gray-500">PNG, JPG or WEBP (max 5MB)</p>
+                  <p className="text-xs text-center text-gray-500">PNG, JPG or WEBP (max 10MB, will be optimized)</p>
                   <Label
                     htmlFor="image-upload"
                     className="mt-2 cursor-pointer rounded-full bg-primary px-3 py-1 text-xs text-white hover:bg-primary/90"

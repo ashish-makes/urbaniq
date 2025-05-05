@@ -212,11 +212,12 @@ const config = {
     "db"
   ],
   "activeProvider": "mongodb",
+  "postinstall": false,
   "inlineDatasources": {
     "db": {
       "url": {
         "fromEnvVar": "DATABASE_URL",
-        "value": "mongodb+srv://ashish:PRDrqFM1Q9xBLntK@urbaniq.udnphen.mongodb.net/urbaniqDB?retryWrites=true&w=majority&appName=urbaniq"
+        "value": null
       }
     }
   },

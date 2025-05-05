@@ -107,10 +107,6 @@ export function Sidebar({ isCollapsed, setIsCollapsed, isMobile = false }: Sideb
 
   const routes = isAdmin ? adminRoutes : userRoutes;
 
-  // Debug log for session state
-  console.log('Sidebar - session user:', session?.user);
-  console.log('Sidebar - isAdmin:', isAdmin);
-
   // Animation variants
   const sidebarVariants = {
     expanded: { width: "240px" },
