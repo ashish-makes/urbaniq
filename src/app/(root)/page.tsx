@@ -4,10 +4,91 @@ import Link from "next/link";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { HeroCarousel } from "@/components/ui/hero-carousel";
-import { ProductCard } from "@/components/ProductCard";
+import { ProductCardWrapper } from "@/components/ProductCardWrapper";
 import { Quote, ArrowRight, Send } from "lucide-react";
 
-export default function Home() {
+// Define the Product interface to match your API
+interface Product {
+  id: string;
+  name: string;
+  price: number;
+  description: string;
+  category: string;
+  slug: string;
+  images: string[];
+  rating?: number;
+  reviewCount?: number;
+  isBestseller?: boolean;
+  featured?: boolean;
+  inStock?: boolean;
+}
+
+// Fetch products from the API
+async function getProducts(): Promise<Product[]> {
+  try {
+    // For server components, we need absolute URLs with protocol
+    // Try to use environment variable, or construct an absolute URL
+    let url: string;
+    
+    if (process.env.NEXT_PUBLIC_API_URL) {
+      // Use the configured API URL if available
+      url = `${process.env.NEXT_PUBLIC_API_URL}/api/products`;
+    } else {
+      // Fallback to the same origin
+      const protocol = process.env.NODE_ENV === 'development' ? 'http' : 'https';
+      const host = process.env.VERCEL_URL || 'localhost:3000';
+      url = `${protocol}://${host}/api/products`;
+    }
+    
+    console.log('Fetching products from:', url);
+    
+    const res = await fetch(url, {
+      next: { revalidate: 3600 } // Revalidate every hour
+    });
+    
+    if (!res.ok) {
+      throw new Error('Failed to fetch products');
+    }
+    
+    const data = await res.json();
+    return data;
+  } catch (error) {
+    console.error('Error fetching products:', error);
+    return []; // Return empty array on error
+  }
+}
+
+export default async function Home() {
+  // Fetch products for the homepage
+  const allProducts = await getProducts();
+  
+  // Use all products and ensure 8 are shown, don't filter by featured/bestseller
+  // as this might be reducing the number displayed
+  const productsToShow = allProducts.slice(0, 8);
+  
+  // If we don't have enough products, create some placeholder products to fill in
+  const displayProducts = [...productsToShow];
+  
+  // Add placeholder products if we have fewer than 8 real products
+  if (displayProducts.length < 8) {
+    const placeholderCount = 8 - displayProducts.length;
+    for (let i = 0; i < placeholderCount; i++) {
+      displayProducts.push({
+        id: `placeholder-${i}`,
+        name: `Product ${i + 1}`,
+        price: 99.99,
+        description: "Coming soon...",
+        category: "placeholder",
+        slug: `placeholder-${i}`,
+        images: ["/placeholder.svg"],
+        rating: 5.0,
+        reviewCount: 0,
+        isBestseller: false,
+        featured: false
+      });
+    }
+  }
+
   const heroSlides = [
     {
       title: "Care Beyond the Collar",
@@ -37,139 +118,6 @@ export default function Home() {
         {/* Hero Carousel Section */}
         <HeroCarousel slides={heroSlides} />
 
-        {/* Categories Section - Improved Bento Grid */}
-        {/*
-        <section className="py-16 px-4">
-          <h2 className="text-2xl md:text-3xl font-bold text-center mb-3">
-            Paws down, this is the smartest stuff<br />I've ever sniffed out.
-          </h2>
-          <p className="text-gray-500 text-center mb-10 max-w-xl mx-auto">
-            Smart gadgets for modern pet parents who want the best for their furry friends. 
-            Tech that makes pet care easier, safer, and more fun.
-          </p>
-          
-          <div className="grid grid-cols-12 grid-rows-[auto_auto_auto] gap-3 md:gap-4 max-w-7xl mx-auto">
-            <div className="col-span-12 md:col-span-6 row-span-2 group relative overflow-hidden rounded-xl bg-white h-auto min-h-[26rem] border border-gray-100 transition-all duration-200 hover:border-gray-200">
-              <div className="absolute inset-0">
-                <img src="/pet-feeder.png" alt="Pet Feeders" className="h-full w-full object-cover" />
-              </div>
-              <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
-              <Link href="/smart-home/feeders" className="absolute inset-0 z-20">
-                <span className="sr-only">Feeders</span>
-              </Link>
-              <div className="absolute z-10 bottom-8 left-8">
-                <span className="inline-block text-xs uppercase font-medium bg-white text-black px-2 py-0.5 rounded-full mb-3">Featured</span>
-                <h3 className="text-2xl font-medium text-white mb-2">Smart Feeders</h3>
-                <p className="text-white/90 text-sm mb-4 max-w-md leading-relaxed">Never miss a mealtime with automated feeding and portion control</p>
-                <Link href="/smart-home/feeders" className="inline-flex items-center bg-white/20 backdrop-blur-md border border-white/30 px-4 py-2 rounded-full transition-colors duration-200 text-sm text-white">
-                  <span>Shop Smart Feeders</span>
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" className="ml-2" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M5 12h14" />
-                    <path d="m12 5 7 7-7 7" />
-                  </svg>
-                </Link>
-              </div>
-            </div>
-
-            <div className="col-span-12 md:col-span-6 group relative overflow-hidden rounded-xl bg-white h-64 border border-gray-100 transition-all duration-200 hover:border-gray-200">
-              <div className="absolute inset-0">
-                <img src="/pet-carrier.png" alt="Pet Carriers" className="h-full w-full object-cover" />
-              </div>
-              <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
-              <Link href="/cats/carriers" className="absolute inset-0 z-20">
-                <span className="sr-only">Pet Carriers</span>
-              </Link>
-              <div className="absolute z-10 bottom-6 left-6">
-                <h3 className="text-xl font-medium text-white mb-1">Pet Carriers</h3>
-                <div className="flex items-center space-x-1">
-                  <Link href="/cats/carriers" className="text-white text-sm bg-white/20 backdrop-blur-md border border-white/30 px-3 py-1 rounded-full">Browse Collection</Link>
-                </div>
-              </div>
-            </div>
-
-            <div className="col-span-6 md:col-span-3 group relative overflow-hidden rounded-xl bg-white h-64 border border-gray-100 transition-all duration-200 hover:border-gray-200">
-              <div className="absolute inset-0">
-                <img src="/pet-camera.png" alt="Pet Cameras" className="h-full w-full object-cover" />
-              </div>
-              <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
-              <Link href="/smart-home/cameras" className="absolute inset-0 z-20">
-                <span className="sr-only">Pet Cameras</span>
-              </Link>
-              <div className="absolute z-10 bottom-6 left-6">
-                <h3 className="text-xl font-medium text-white mb-1">Cameras</h3>
-                <div className="flex items-center space-x-1">
-                  <Link href="/smart-home/cameras" className="text-white text-sm bg-white/20 backdrop-blur-md border border-white/30 px-3 py-1 rounded-full">Explore</Link>
-                </div>
-              </div>
-            </div>
-
-            <div className="col-span-6 md:col-span-3 group relative overflow-hidden rounded-xl bg-white h-64 border border-gray-100 transition-all duration-200 hover:border-gray-200">
-              <div className="absolute inset-0">
-                <img src="/hero-one.png" alt="Self-Cleaning Litter Box" className="h-full w-full object-cover" />
-              </div>
-              <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
-              <Link href="/cats/litter-boxes" className="absolute inset-0 z-20">
-                <span className="sr-only">Self-Cleaning Litter Box</span>
-              </Link>
-              <div className="absolute z-10 bottom-6 left-6">
-                <span className="inline-block text-xs uppercase font-medium bg-white text-black px-2 py-0.5 rounded-full mb-2">New</span>
-                <h3 className="text-xl font-medium text-white mb-1">Litter Boxes</h3>
-                <div className="flex items-center space-x-1">
-                  <Link href="/cats/litter-boxes" className="text-white text-sm bg-white/20 backdrop-blur-md border border-white/30 px-3 py-1 rounded-full">Shop Now</Link>
-                </div>
-              </div>
-            </div>
-
-            <div className="col-span-12 md:col-span-4 group relative overflow-hidden rounded-xl bg-white h-64 border border-gray-100 transition-all duration-200 hover:border-gray-200">
-              <div className="absolute inset-0">
-                <img src="/pet-toys.png" alt="Pet Toys" className="h-full w-full object-cover" />
-              </div>
-              <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
-              <Link href="/dogs/toys" className="absolute inset-0 z-20">
-                <span className="sr-only">Pet Toys</span>
-              </Link>
-              <div className="absolute z-10 bottom-6 left-6">
-                <h3 className="text-xl font-medium text-white mb-1">Interactive Toys</h3>
-                <div className="flex items-center space-x-1">
-                  <Link href="/dogs/toys" className="text-white text-sm bg-white/20 backdrop-blur-md border border-white/30 px-3 py-1 rounded-full">Discover</Link>
-                </div>
-              </div>
-            </div>
-            
-            <div className="col-span-12 md:col-span-8 group relative overflow-hidden rounded-xl bg-white h-64 border border-gray-100 transition-all duration-200 hover:border-gray-200">
-              <div className="absolute inset-0">
-                <img src="/hero-three.png" alt="Smart Pet Beds" className="h-full w-full object-cover" />
-              </div>
-              <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
-              <Link href="/beds" className="absolute inset-0 z-20">
-                <span className="sr-only">Pet Beds</span>
-              </Link>
-              <div className="absolute z-10 bottom-6 left-6">
-                <h3 className="text-xl font-medium text-white mb-1">Smart Pet Beds</h3>
-                <p className="text-white/90 text-sm mb-3 max-w-md leading-relaxed">Temperature-controlled comfort for better sleep</p>
-                <Link href="/beds" className="text-white text-sm bg-white/20 backdrop-blur-md border border-white/30 px-3 py-1 rounded-full">Shop Collection</Link>
-              </div>
-            </div>
-          </div>
-          
-          <div className="text-center mt-12">
-            <Link href="/categories">
-              <div className="group inline-flex items-center justify-center py-2 pl-6 pr-4 rounded-full bg-white text-black border border-gray-200 hover:bg-gray-50 transition-all font-medium text-sm">
-                <span className="mr-2">View all categories</span>
-                <div className="bg-black rounded-full p-1.5 flex items-center justify-center">
-                  <div className="w-[14px] h-[14px] group-hover:-rotate-45 transition-transform duration-300 ease-in-out">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M5 12h14" />
-                      <path d="m12 5 7 7-7 7" />
-                    </svg>
-                  </div>
-                </div>
-              </div>
-            </Link>
-          </div>
-        </section>
-        */}
-
         {/* Products Section */}
         <section className="py-16 px-4 bg-gray-50">
           <div className="max-w-7xl mx-auto">
@@ -181,82 +129,33 @@ export default function Home() {
             </p>
             
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-              <ProductCard 
-                id="smart-feeder-1"
-                name="Smart Pet Feeder"
-                price={129.99}
-                description="Automated feeding with app control and portion management for your pet's diet"
-                rating={4.7}
-                reviewCount={120}
-                image="/pet-feeder.png"
-                isBestseller={true}
-              />
-              <ProductCard 
-                id="pet-camera-1"
-                name="HD Pet Camera"
-                price={89.99}
-                description="Monitor your pet with two-way audio and treat dispenser for remote interaction"
-                rating={4.5}
-                reviewCount={84}
-                image="/pet-camera.png"
-                isBestseller={true}
-              />
-              <ProductCard 
-                id="smart-collar-1"
-                name="GPS Smart Collar"
-                price={79.99}
-                description="Track location and activity with real-time notifications and health monitoring"
-                rating={4.3}
-                reviewCount={56}
-                image="/hero-one.png"
-              />
-              <ProductCard 
-                id="auto-toy-1"
-                name="Interactive Toy Ball"
-                price={39.99}
-                description="Keeps pets entertained for hours with automated movement and light patterns"
-                rating={4.8}
-                reviewCount={92}
-                image="/pet-toys.png"
-              />
-              <ProductCard 
-                id="smart-water-1"
-                name="Smart Water Fountain"
-                price={59.99}
-                description="Fresh filtered water on demand with flow monitoring and cleanliness alerts"
-                rating={4.6}
-                reviewCount={73}
-                image="/hero-two.png"
-              />
-              <ProductCard 
-                id="carrier-premium-1"
-                name="Premium Pet Carrier"
-                price={149.99}
-                description="Comfortable travel with smart features including climate control and anxiety reduction"
-                rating={4.9}
-                reviewCount={38}
-                image="/pet-carrier.png"
-                isBestseller={true}
-              />
-              <ProductCard 
-                id="smart-bed-1"
-                name="Temperature Control Pet Bed"
-                price={199.99}
-                description="Self-heating and cooling bed that adjusts to your pet's body temperature for optimal comfort"
-                rating={4.8}
-                reviewCount={45}
-                image="/hero-three.png"
-              />
-              <ProductCard 
-                id="auto-litter-1"
-                name="Self-Cleaning Litter Box"
-                price={249.99}
-                description="Automated waste removal and odor control with health monitoring system"
-                rating={4.7}
-                reviewCount={67}
-                image="/pet-camera.png"
-                isBestseller={true}
-              />
+              {displayProducts.length > 0 ? (
+                displayProducts.map((product) => (
+              <ProductCardWrapper 
+                    key={product.id}
+                    id={product.id}
+                    name={product.name}
+                    price={product.price}
+                    description={product.description || ""}
+                    rating={product.rating || 4.5}
+                    reviewCount={product.reviewCount || 0}
+                    image={product.images?.[0] || "/placeholder.svg"}
+                    isBestseller={product.isBestseller}
+                    slug={product.slug}
+                  />
+                ))
+              ) : (
+                // Fallback to show some placeholder cards if no products are returned
+                Array(8).fill(0).map((_, i) => (
+                  <div key={i} className="bg-white rounded-lg p-4 shadow-sm animate-pulse">
+                    <div className="w-full h-48 bg-gray-200 rounded-lg mb-4"></div>
+                    <div className="h-6 bg-gray-200 rounded w-3/4 mb-2"></div>
+                    <div className="h-4 bg-gray-200 rounded w-1/2 mb-4"></div>
+                    <div className="h-4 bg-gray-200 rounded w-full mb-2"></div>
+                    <div className="h-4 bg-gray-200 rounded w-5/6"></div>
+                  </div>
+                ))
+              )}
             </div>
             
             <div className="text-center mt-12">

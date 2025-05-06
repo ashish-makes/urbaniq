@@ -1,45 +1,35 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React from "react";
 import Link from "next/link";
 import { ShoppingCart, Trash2, Plus, Minus, ArrowRight } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetClose } from "@/components/ui/sheet";
-
-type CartItem = {
-  id: number;
-  name: string;
-  price: number;
-  quantity: number;
-  image: string;
-};
-
-// Empty cart by default
-const cartItems: CartItem[] = [];
-
-const cartTotal = cartItems.reduce((total, item) => total + (item.price * item.quantity), 0);
+import { useCart } from "@/context/CartContext";
+import Image from "next/image";
 
 export function CartSidebar() {
-  const [open, setOpen] = useState(false);
+  const { 
+    items, 
+    cartCount, 
+    cartTotal, 
+    removeFromCart, 
+    updateQuantity, 
+    isCartOpen, 
+    openCart, 
+    closeCart
+  } = useCart();
 
-  // Update body attribute when cart sidebar opens/closes
-  useEffect(() => {
-    if (open) {
-      document.body.setAttribute('data-sidebar-open', 'true');
-    } else {
-      document.body.removeAttribute('data-sidebar-open');
-    }
-  }, [open]);
-  
   return (
-    <Sheet defaultOpen={false} modal={true} open={open} onOpenChange={setOpen}>
+    <Sheet open={isCartOpen} onOpenChange={(open) => open ? openCart() : closeCart()}>
       <SheetTrigger asChild>
         <button 
           className="rounded-full h-7 w-7 p-0 flex items-center justify-center hover:bg-gray-100 transition-colors relative flex-shrink-0"
           aria-label="Open cart"
+          onClick={() => openCart()}
         >
           <ShoppingCart size={16} strokeWidth={1.5} />
           <span className="absolute -top-1 -right-1 bg-black text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center">
-            {cartItems.reduce((total, item) => total + item.quantity, 0)}
+            {cartCount}
           </span>
         </button>
       </SheetTrigger>
@@ -49,29 +39,45 @@ export function CartSidebar() {
             <SheetTitle className="text-lg font-medium m-0 p-0">Your Cart</SheetTitle>
           </div>
           
-          {cartItems.length > 0 ? (
+          {items.length > 0 ? (
             <>
               <div className="flex-1 overflow-auto pt-2">
-                {cartItems.map((item) => (
+                {items.map((item) => (
                   <div key={item.id} className="px-5 py-4 border-b border-gray-50">
                     <div className="flex gap-3">
-                      <div className="w-20 h-20 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
-                        <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+                      <div className="w-20 h-20 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0 relative">
+                        <Image 
+                          src={item.image} 
+                          alt={item.name} 
+                          className="object-cover" 
+                          fill
+                          sizes="80px"
+                        />
                       </div>
                       <div className="flex-1">
                         <div className="flex justify-between">
                           <h3 className="font-medium text-sm">{item.name}</h3>
-                          <button className="text-gray-400 hover:text-gray-600 transition-colors">
+                          <button 
+                            className="text-gray-400 hover:text-gray-600 transition-colors"
+                            onClick={() => removeFromCart(item.id)}
+                          >
                             <Trash2 size={16} />
                           </button>
                         </div>
                         <div className="mt-1 text-gray-500 text-sm">${item.price.toFixed(2)}</div>
                         <div className="mt-3 flex items-center">
-                          <button className="w-7 h-7 rounded-full border border-gray-200 flex items-center justify-center text-gray-500 hover:bg-gray-100 transition-colors">
+                          <button 
+                            className="w-7 h-7 rounded-full border border-gray-200 flex items-center justify-center text-gray-500 hover:bg-gray-100 transition-colors"
+                            onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                            disabled={item.quantity <= 1}
+                          >
                             <Minus size={14} />
                           </button>
                           <span className="mx-3 text-sm">{item.quantity}</span>
-                          <button className="w-7 h-7 rounded-full border border-gray-200 flex items-center justify-center text-gray-500 hover:bg-gray-100 transition-colors">
+                          <button 
+                            className="w-7 h-7 rounded-full border border-gray-200 flex items-center justify-center text-gray-500 hover:bg-gray-100 transition-colors"
+                            onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                          >
                             <Plus size={14} />
                           </button>
                         </div>
@@ -122,7 +128,7 @@ export function CartSidebar() {
               <h3 className="text-lg font-medium mb-2">Your cart is empty</h3>
               <p className="text-gray-500 text-sm text-center mb-6">Looks like you haven't added any products to your cart yet.</p>
               <SheetClose asChild>
-                <Link href="/">
+                <Link href="/products">
                   <div className="group inline-flex items-center justify-center py-2 pl-4 pr-3 rounded-full bg-black text-white hover:bg-black/90 transition-all font-bricolage text-sm">
                     <span className="mr-1.5">Start Shopping</span>
                     <div className="bg-white rounded-full p-1 flex items-center justify-center">

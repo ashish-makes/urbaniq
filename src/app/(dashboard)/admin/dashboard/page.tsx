@@ -25,7 +25,8 @@ import {
   Eye,
   Trash2,
   Download,
-  Loader2
+  Loader2,
+  Folder
 } from 'lucide-react';
 import { toast } from 'sonner';
 import Link from 'next/link';
@@ -293,6 +294,15 @@ export default function AdminDashboard() {
               <Grid3X3 className="h-5 w-5 text-indigo-500" />
             </div>
             <span className="text-sm font-medium text-gray-700">Products</span>
+          </div>
+        </Link>
+        
+        <Link href="/admin/categories">
+          <div className="flex flex-col items-center justify-center h-24 bg-green-50 rounded-lg hover:bg-green-100 transition-colors group">
+            <div className="h-10 w-10 rounded-full bg-white flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
+              <Folder className="h-5 w-5 text-green-500" />
+            </div>
+            <span className="text-sm font-medium text-gray-700">Categories</span>
           </div>
         </Link>
         

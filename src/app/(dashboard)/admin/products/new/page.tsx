@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -41,6 +41,8 @@ export default function AddProductPage() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [previewImages, setPreviewImages] = useState<string[]>([]);
+  const [categories, setCategories] = useState<Array<{ id: string, name: string }>>([]);
+  const [isLoadingCategories, setIsLoadingCategories] = useState(true);
   
   // Form state
   const [formData, setFormData] = useState({
@@ -50,7 +52,7 @@ export default function AddProductPage() {
     price: '',
     originalPrice: '',
     stock: '',
-    category: '',
+    categoryId: '',
     imageFiles: [] as File[],
     isBestseller: false,
     inStock: true,
@@ -62,25 +64,34 @@ export default function AddProductPage() {
     specs: {} as Record<string, string>
   });
 
+  // Fetch categories when component mounts
+  useEffect(() => {
+    const fetchCategories = async () => {
+      setIsLoadingCategories(true);
+      try {
+        const response = await fetch('/api/admin/categories');
+        if (!response.ok) {
+          throw new Error('Failed to load categories');
+        }
+        
+        const data = await response.json();
+        setCategories(data || []);
+      } catch (error) {
+        console.error('Error loading categories:', error);
+        toast.error('Failed to load categories');
+      } finally {
+        setIsLoadingCategories(false);
+      }
+    };
+    
+    fetchCategories();
+  }, []);
+
   // State for dynamic specs fields
   const [specFields, setSpecFields] = useState<{ key: string; value: string }[]>([
     { key: 'dimensions', value: '' },
     { key: 'weight', value: '' },
   ]);
-
-  const categories = [
-    'Furniture',
-    'Lighting',
-    'Decor',
-    'Kitchen',
-    'Bathroom',
-    'Bedroom',
-    'Office',
-    'Outdoor',
-    'Electronics',
-    'Smart Home',
-    'Pet Supplies',
-  ];
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -225,7 +236,7 @@ export default function AddProductPage() {
       return;
     }
 
-    if (!formData.category) {
+    if (!formData.categoryId) {
       toast.error('Please select a category');
       return;
     }
@@ -263,7 +274,7 @@ export default function AddProductPage() {
       }
       
       data.append('stock', formData.stock);
-      data.append('category', formData.category);
+      data.append('categoryId', formData.categoryId);
       
       // Add boolean values
       data.append('isBestseller', String(formData.isBestseller));
@@ -303,12 +314,12 @@ export default function AddProductPage() {
   };
 
   return (
-    <div>
+    <div className="relative min-h-full">
       <div className="mb-4">
         <h1 className="text-xl font-bold">Add New Product</h1>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="mb-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           {/* Left Column (2/3) */}
           <div className="lg:col-span-2 space-y-4">
@@ -598,22 +609,35 @@ export default function AddProductPage() {
               <h2 className="text-md font-medium mb-3">Category</h2>
               <div className="space-y-1">
                 <Label htmlFor="category" className="text-sm">Select Category <span className="text-red-500">*</span></Label>
-                <Select 
-                  value={formData.category} 
-                  onValueChange={(value) => handleSelectChange('category', value)}
-                  required
-                >
-                  <SelectTrigger id="category" className="border-input rounded-lg">
-                    <SelectValue placeholder="Select a category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories.map((category) => (
-                      <SelectItem key={category} value={category}>
-                        {category}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                {isLoadingCategories ? (
+                  <div className="py-2 flex items-center justify-center">
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    <span className="text-sm text-gray-500">Loading categories...</span>
+                  </div>
+                ) : (
+                  <Select 
+                    value={formData.categoryId} 
+                    onValueChange={(value) => handleSelectChange('categoryId', value)}
+                    required
+                  >
+                    <SelectTrigger id="categoryId" className="border-input rounded-lg">
+                      <SelectValue placeholder="Select a category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categories.length > 0 ? (
+                        categories.map((category) => (
+                          <SelectItem key={category.id} value={category.id}>
+                            {category.name}
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <div className="p-2 text-center text-sm text-gray-500">
+                          No categories found. Please create a category first.
+                        </div>
+                      )}
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
             </div>
 
@@ -754,7 +778,7 @@ export default function AddProductPage() {
             </div>
 
             {/* Action Buttons */}
-            <div className="flex gap-2 mt-4">
+            <div className="flex gap-2 mt-6">
               <Button
                 type="button"
                 variant="outline"

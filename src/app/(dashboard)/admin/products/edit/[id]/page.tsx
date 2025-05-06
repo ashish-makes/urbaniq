@@ -46,6 +46,7 @@ interface Product {
   originalPrice: number | null;
   stock: number;
   category: string;
+  categoryId: string;
   imageFiles?: File[];
   images: string[];
   isBestseller: boolean;
@@ -68,6 +69,8 @@ export default function EditProductPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [previewImages, setPreviewImages] = useState<string[]>([]);
   const [existingImages, setExistingImages] = useState<string[]>([]);
+  const [categories, setCategories] = useState<Array<{id: string; name: string}>>([]);
+  const [isLoadingCategories, setIsLoadingCategories] = useState(true);
   
   // Form state
   const [formData, setFormData] = useState<Product>({
@@ -79,6 +82,7 @@ export default function EditProductPage() {
     originalPrice: null,
     stock: 0,
     category: '',
+    categoryId: '',
     images: [],
     imageFiles: [],
     isBestseller: false,
@@ -98,20 +102,28 @@ export default function EditProductPage() {
     { key: 'weight', value: '' },
   ]);
 
-  const categories = [
-    'Furniture',
-    'Lighting',
-    'Decor',
-    'Kitchen',
-    'Bathroom',
-    'Bedroom',
-    'Office',
-    'Outdoor',
-    'Electronics',
-    'Smartphone',
-    'Smart Home',
-    'Pet Supplies',
-  ];
+  // Fetch categories when component mounts
+  useEffect(() => {
+    const fetchCategories = async () => {
+      setIsLoadingCategories(true);
+      try {
+        const response = await fetch('/api/admin/categories');
+        if (!response.ok) {
+          throw new Error('Failed to load categories');
+        }
+        
+        const data = await response.json();
+        setCategories(data || []);
+      } catch (error) {
+        console.error('Error loading categories:', error);
+        toast.error('Failed to load categories');
+      } finally {
+        setIsLoadingCategories(false);
+      }
+    };
+    
+    fetchCategories();
+  }, []);
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -312,7 +324,7 @@ export default function EditProductPage() {
       return;
     }
 
-    if (!formData.category) {
+    if (!formData.categoryId) {
       toast.error('Please select a category');
       return;
     }
@@ -354,7 +366,7 @@ export default function EditProductPage() {
       }
       
       data.append('stock', String(formData.stock));
-      data.append('category', formData.category);
+      data.append('categoryId', formData.categoryId);
       
       // Add boolean values
       data.append('isBestseller', String(formData.isBestseller));
@@ -703,22 +715,35 @@ export default function EditProductPage() {
               <h2 className="text-md font-medium mb-3">Category</h2>
               <div className="space-y-1">
                 <Label htmlFor="category" className="text-sm">Select Category <span className="text-red-500">*</span></Label>
-                <Select 
-                  value={formData.category} 
-                  onValueChange={(value) => handleSelectChange('category', value)}
-                  required
-                >
-                  <SelectTrigger id="category" className="border-input rounded-lg">
-                    <SelectValue placeholder="Select a category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories.map((category) => (
-                      <SelectItem key={category} value={category}>
-                        {category}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                {isLoadingCategories ? (
+                  <div className="py-2 flex items-center justify-center">
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    <span className="text-sm text-gray-500">Loading categories...</span>
+                  </div>
+                ) : (
+                  <Select 
+                    value={formData.categoryId} 
+                    onValueChange={(value) => handleSelectChange('categoryId', value)}
+                    required
+                  >
+                    <SelectTrigger id="categoryId" className="border-input rounded-lg">
+                      <SelectValue placeholder="Select a category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categories.length > 0 ? (
+                        categories.map((category) => (
+                          <SelectItem key={category.id} value={category.id}>
+                            {category.name}
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <div className="p-2 text-center text-sm text-gray-500">
+                          No categories found. Please create a category first.
+                        </div>
+                      )}
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
             </div>
 

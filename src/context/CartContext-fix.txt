@@ -1,0 +1,116 @@
+INSTRUCTIONS FOR FIXING CART CONTEXT
+
+The issue is that your CartContext.tsx is using productId when making API calls to update or delete cart items, but your API is expecting the cart item's ID instead.
+
+In CartContext.tsx, find the removeFromCart function and change:
+
+```typescript
+  const removeFromCart = async (productId: string) => {
+    // First update local state for immediate feedback
+    const newItems = items.filter(item => item.productId !== productId);
+    setItems(newItems);
+    
+    // Then sync with server
+    try {
+      await fetch(`/api/cart/items/${productId}`, {
+        method: 'DELETE',
+      });
+      
+      // Refresh cart to ensure sync
+      fetchCart();
+    } catch (error) {
+      console.error('Failed to remove item from cart on server', error);
+    }
+  };
+```
+
+Change it to:
+
+```typescript
+  const removeFromCart = async (itemId: string) => {
+    // First update local state for immediate feedback
+    const newItems = items.filter(item => item.id !== itemId);
+    setItems(newItems);
+    
+    // Then sync with server
+    try {
+      await fetch(`/api/cart/items/${itemId}`, {
+        method: 'DELETE',
+      });
+      
+      // Refresh cart to ensure sync
+      fetchCart();
+    } catch (error) {
+      console.error('Failed to remove item from cart on server', error);
+    }
+  };
+```
+
+Similarly, find the updateQuantity function and change:
+
+```typescript
+  const updateQuantity = async (productId: string, quantity: number) => {
+    if (quantity < 1) return;
+    
+    // First update local state for immediate feedback
+    const newItems = items.map(item => 
+      item.productId === productId ? { ...item, quantity } : item
+    );
+    
+    setItems(newItems);
+    
+    // Then sync with server
+    try {
+      await fetch(`/api/cart/items/${productId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ quantity }),
+      });
+      
+      // Refresh cart to ensure sync
+      fetchCart();
+    } catch (error) {
+      console.error('Failed to update item quantity on server', error);
+    }
+  };
+```
+
+Change it to:
+
+```typescript
+  const updateQuantity = async (itemId: string, quantity: number) => {
+    if (quantity < 1) return;
+    
+    // First update local state for immediate feedback
+    const newItems = items.map(item => 
+      item.id === itemId ? { ...item, quantity } : item
+    );
+    
+    setItems(newItems);
+    
+    // Then sync with server
+    try {
+      await fetch(`/api/cart/items/${itemId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ quantity }),
+      });
+      
+      // Refresh cart to ensure sync
+      fetchCart();
+    } catch (error) {
+      console.error('Failed to update item quantity on server', error);
+    }
+  };
+```
+
+The key changes are:
+1. Function parameter from `productId` to `itemId` 
+2. Using `item.id` instead of `item.productId` in both filter and map operations
+3. The URL parameters in the API calls are now using the cart item ID, not the product ID
+
+Make sure your CartSidebar component is passing the item.id, not item.productId to these functions. 

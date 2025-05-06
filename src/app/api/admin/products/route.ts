@@ -109,7 +109,7 @@ export async function POST(req: NextRequest) {
     const name = formData.get('name') as string;
     const description = formData.get('description') as string;
     const longDescription = formData.get('longDescription') as string || '';
-    const category = formData.get('category') as string;
+    const categoryId = formData.get('categoryId') as string;
     const priceStr = formData.get('price') as string;
     const originalPriceStr = formData.get('originalPrice') as string;
     const stockStr = formData.get('stock') as string;
@@ -162,7 +162,7 @@ export async function POST(req: NextRequest) {
     const featured = formData.get('featured') === 'true';
     
     // Validate required fields
-    if (!name || !description || !category || isNaN(price) || isNaN(stock)) {
+    if (!name || !description || isNaN(price) || isNaN(stock)) {
       return NextResponse.json(
         { error: 'Missing required fields' }, 
         { status: 400 }
@@ -216,7 +216,7 @@ export async function POST(req: NextRequest) {
     }
     
     // Create product in the database
-    const productData = {
+    const productData: any = {
       name,
       slug,
       description,
@@ -224,8 +224,7 @@ export async function POST(req: NextRequest) {
       price,
       originalPrice,
       stock,
-      category,
-      images, // Save array of image URLs from ImageKit
+      images,
       isBestseller,
       inStock,
       freeShipping,
@@ -234,9 +233,27 @@ export async function POST(req: NextRequest) {
       colors,
       tags,
       specs,
-      rating: 0, // Default rating
-      reviewCount: 0, // Default review count
+      rating: 0,
+      reviewCount: 0,
     };
+    
+    // Set category data if a category ID is provided
+    if (categoryId) {
+      try {
+        // Find the category to get its name
+        const category = await prisma.category.findUnique({
+          where: { id: categoryId },
+          select: { name: true }
+        });
+        
+        if (category) {
+          productData.categoryId = categoryId;
+          productData.categoryName = category.name;
+        }
+      } catch (err) {
+        console.error('Error fetching category:', err);
+      }
+    }
     
     console.log('Creating product with data:', JSON.stringify(productData, null, 2));
     
@@ -345,7 +362,7 @@ export async function PUT(req: NextRequest) {
     const name = formData.get('name') as string;
     const description = formData.get('description') as string;
     const longDescription = formData.get('longDescription') as string || '';
-    const category = formData.get('category') as string;
+    const categoryId = formData.get('categoryId') as string;
     const priceStr = formData.get('price') as string;
     const originalPriceStr = formData.get('originalPrice') as string;
     const stockStr = formData.get('stock') as string;
@@ -406,7 +423,7 @@ export async function PUT(req: NextRequest) {
     const featured = formData.get('featured') === 'true';
     
     // Validate required fields
-    if (!name || !description || !category || isNaN(price) || isNaN(stock)) {
+    if (!name || !description || isNaN(price) || isNaN(stock)) {
       return NextResponse.json(
         { error: 'Missing required fields' }, 
         { status: 400 }
@@ -455,15 +472,15 @@ export async function PUT(req: NextRequest) {
       );
     }
     
-    // Update product in the database
+    // Set category data if a category ID is provided
     const productData: any = {
       name,
       slug,
       description,
       longDescription,
       price,
+      originalPrice,
       stock,
-      category,
       isBestseller,
       inStock,
       freeShipping,
@@ -474,9 +491,29 @@ export async function PUT(req: NextRequest) {
       specs,
     };
     
-    // Only include originalPrice if it's not null or undefined
-    if (originalPrice !== null) {
-      productData.originalPrice = originalPrice;
+    if (categoryId) {
+      try {
+        // Find the category to get its name
+        const category = await prisma.category.findUnique({
+          where: { id: categoryId },
+          select: { name: true }
+        });
+        
+        if (category) {
+          productData.categoryId = categoryId;
+          productData.categoryName = category.name;
+        } else {
+          // If removing category, set both to null
+          productData.categoryId = null;
+          productData.categoryName = null;
+        }
+      } catch (err) {
+        console.error('Error fetching category:', err);
+      }
+    } else {
+      // If no category ID is provided, clear category data
+      productData.categoryId = null;
+      productData.categoryName = null;
     }
     
     // Only include images if we have any

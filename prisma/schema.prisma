@@ -26,6 +26,7 @@ model User {
   sessions      Session[]
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+  carts         Cart[]
 }
 
 model Account {
@@ -64,6 +65,18 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
+model Category {
+  id          String     @id @default(auto()) @map("_id") @db.ObjectId
+  name        String
+  slug        String     @unique
+  description String?
+  image       String?
+  products    Product[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  isActive    Boolean    @default(true)
+}
+
 model Product {
   id            String    @id @default(auto()) @map("_id") @db.ObjectId
   name          String
@@ -73,7 +86,9 @@ model Product {
   price         Float
   originalPrice Float?
   stock         Int       @default(0)
-  category      String
+  categoryId    String?   @db.ObjectId
+  category      Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  categoryName  String?   // Denormalized field for easy access to category name
   images        String[]  // Array of image URLs
   rating        Float     @default(0)
   reviewCount   Int       @default(0)
@@ -87,6 +102,35 @@ model Product {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   featured      Boolean   @default(false)
+  cartItems     CartItem[]
+}
+
+model Cart {
+  id        String     @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String?    @db.ObjectId
+  user      User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items     CartItem[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  sessionId String?    // For guest users without an account
+  
+  @@index([userId])
+  @@index([sessionId])
+}
+
+model CartItem {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  cartId    String   @db.ObjectId
+  cart      Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  productId String   @db.ObjectId
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  quantity  Int      @default(1)
+  price     Float    // Store price at time of adding to cart
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([cartId])
+  @@index([productId])
 }
 
 enum Role {

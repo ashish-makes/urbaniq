@@ -1,46 +1,32 @@
-import { Geist, Geist_Mono } from "next/font/google";
-import { Bricolage_Grotesque } from "next/font/google";
-import { SessionProvider } from "@/providers/SessionProvider";
-import { Toaster } from 'sonner';
-import './globals.css';
+import "./globals.css";
+import type { Metadata } from "next";
+import { Inter } from "next/font/google";
+import { ReactQueryProvider } from "@/providers/react-query-provider";
+import { AuthProvider } from "@/providers/auth-provider";
+import { CartProvider } from "@/context/CartContext";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
+const inter = Inter({ subsets: ["latin"] });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
-const bricolage = Bricolage_Grotesque({
-  variable: "--font-bricolage",
-  subsets: ["latin"],
-});
-
-export const metadata = {
-  title: {
-    template: '%s | UrbanIQ',
-    default: 'UrbanIQ - Smart Pet Tech',
-  },
-  description: 'Innovative smart devices for modern pets',
+export const metadata: Metadata = {
+  title: "UrbanIQ | Smart Pet Products",
+  description: "UrbanIQ offers innovative, high-quality smart products for modern pet owners.",
 };
 
 export default function RootLayout({
   children,
-}: {
+}: Readonly<{
   children: React.ReactNode;
-}) {
+}>) {
   return (
     <html lang="en">
-      <body 
-        className={`${geistSans.variable} ${geistMono.variable} ${bricolage.variable} font-sans`}
-      >
-        <SessionProvider>
-          {children}
-          <Toaster position="bottom-right" />
-        </SessionProvider>
+      <body className={inter.className}>
+        <AuthProvider>
+          <ReactQueryProvider>
+            <CartProvider>
+              {children}
+            </CartProvider>
+          </ReactQueryProvider>
+        </AuthProvider>
       </body>
     </html>
   );

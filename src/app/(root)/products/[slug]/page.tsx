@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, Suspense } from 'react';
 import Image from 'next/image';
 import { useParams } from 'next/navigation';
 import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
 import { Button } from '@/components/ui/button';
-import { ProductCard } from '@/components/ProductCard';
+import { ClientProductCard } from '@/components/ClientProductCard';
 import { 
   Star, 
   ShoppingCart, 
@@ -39,6 +39,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { motion, AnimatePresence } from "framer-motion";
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 // Define types for product data
 interface ProductSpec {
@@ -78,7 +79,7 @@ interface Product {
   reviews?: Review[];
 }
 
-// Sample products data (would typically come from an API or database)
+// Sample products data as fallback (would typically come from an API or database)
 const productsData: Product[] = [
   {
     id: 'smart-feeder-1',
@@ -404,11 +405,79 @@ const productsData: Product[] = [
   }
 ];
 
+// Fetch a product by slug - optimized with cache headers
+const fetchProduct = async (productSlug: string): Promise<Product> => {
+  // Extract ID from slug if it has a format of text-id
+  const slugParts = productSlug.split('-');
+  const potentialId = slugParts[slugParts.length - 1];
+  
+  // Decide which endpoint to use based on if we think this is an ID
+  let endpoint = `/api/products/${productSlug}`;
+  if (potentialId && /^[a-zA-Z0-9_-]+$/.test(potentialId)) {
+    try {
+      // Try ID endpoint first with a short timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 500);
+      
+      const idResponse = await fetch(`/api/products/id/${potentialId}`, {
+        signal: controller.signal,
+        next: { revalidate: 3600 } // Cache for 1 hour
+      });
+      
+      clearTimeout(timeoutId);
+      
+      if (idResponse.ok) {
+        const data = await idResponse.json();
+        return data;
+      }
+    } catch (error) {
+      // Fall back to regular slug fetch
+      console.log('ID fetch failed, trying slug fetch');
+    }
+  }
+  
+  // Fallback to slug fetch
+  const response = await fetch(endpoint, {
+    next: { revalidate: 3600 } // Cache for 1 hour
+  });
+  
+  if (!response.ok) {
+    throw new Error('Failed to fetch product');
+  }
+  
+  return response.json();
+};
+
+// Fetch related products by category
+const fetchRelatedProducts = async (category: string, currentSlug: string): Promise<Product[]> => {
+  try {
+    const response = await fetch(`/api/products?category=${category}`, {
+      next: { revalidate: 3600 } // Cache for 1 hour
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to fetch related products');
+    }
+    
+    const products = await response.json();
+    
+    // Filter out current product and limit to 4
+    return products
+      .filter((p: Product) => p.slug !== currentSlug)
+      .slice(0, 4);
+  } catch (error) {
+    console.error('Error fetching related products:', error);
+    return [];
+  }
+};
+
+// Main product component with loading optimization
 export default function ProductDetailPage() {
   const { slug } = useParams();
-  const [product, setProduct] = useState<Product | null>(null);
+  const productSlug: string = typeof slug === 'string' ? slug : Array.isArray(slug) ? slug[0] : '';
+  const queryClient = useQueryClient();
+  
   const [quantity, setQuantity] = useState(1);
-  const [isLoading, setIsLoading] = useState(true);
   const [selectedColor, setSelectedColor] = useState('');
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [showShareMenu, setShowShareMenu] = useState(false);
@@ -418,128 +487,93 @@ export default function ProductDetailPage() {
   const [carouselApi, setCarouselApi] = useState<CarouselApi>();
   const [currentSlide, setCurrentSlide] = useState(0);
   const [autoplayProgress, setAutoplayProgress] = useState(0);
-  const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
-  // Auto-scroll duration in milliseconds
   const autoplayDuration = 5000;
 
-  useEffect(() => {
-    const fetchProduct = async () => {
-      setIsLoading(true);
-      try {
-        // Get the slug from params
-        const productSlug = Array.isArray(slug) ? slug[0] : slug;
-        
-        // Fetch product data from the API
-        const response = await fetch(`/api/products/${productSlug}`);
-        
-        if (!response.ok) {
-          console.error('Error fetching product:', response.statusText);
-          setProduct(null);
-          setIsLoading(false);
-          return;
-        }
-        
-        const productData = await response.json();
-        
-        // Process the data to match our Product interface
-        if (productData) {
-          // Add default values for fields that might be missing
-          const processedProduct: Product = {
-            ...productData,
-            // Ensure reviews exist or set to empty array
-            reviews: productData.reviews || [],
-            // Set default color if available
-            colors: productData.colors || [],
-            // Ensure other required fields have defaults
-            rating: productData.rating || 0,
-            reviewCount: productData.reviewCount || 0,
-            longDescription: productData.longDescription || productData.description,
-            features: productData.features || [],
-            specs: productData.specs || {}
-          };
-          
-          setProduct(processedProduct);
-          
-          if (processedProduct.colors && processedProduct.colors.length > 0) {
-            setSelectedColor(processedProduct.colors[0]);
-          }
-          
-          // Fetch related products (from same category)
-          fetchRelatedProducts(processedProduct.category);
-        } else {
-          setProduct(null);
-        }
-      } catch (error) {
-        console.error('Error:', error);
-        setProduct(null);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
-    fetchProduct();
-  }, [slug]);
+  // Fetch product with React Query for caching and loading state
+  const { 
+    data: product, 
+    isLoading,
+    isError
+  } = useQuery<Product>({
+    queryKey: ['product', productSlug],
+    queryFn: () => fetchProduct(productSlug),
+    enabled: !!productSlug,
+    staleTime: 1000 * 60 * 5, // Consider data fresh for 5 minutes
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    retry: 1
+  });
   
-  // Fetch related products
-  const fetchRelatedProducts = async (category: string) => {
-    try {
-      const response = await fetch(`/api/products?category=${category}`);
-      if (response.ok) {
-        const products = await response.json();
-        // Filter out current product and limit to 4
-        const filtered = products
-          .filter((p: Product) => p.slug !== (Array.isArray(slug) ? slug[0] : slug))
-          .slice(0, 4);
-        setRelatedProducts(filtered);
+  // Effect to handle product data when it changes
+  useEffect(() => {
+    if (product) {
+      // Set selected color when product data is available
+      if (product.colors && product.colors.length > 0) {
+        setSelectedColor(product.colors[0]);
       }
-    } catch (error) {
-      console.error('Error fetching related products:', error);
+      
+      // Handle URL correction if needed (self-healing URL)
+      if (product.slug && product.slug !== productSlug) {
+        window.history.replaceState({}, '', `/products/${product.slug}`);
+      }
+      
+      // Prefetch related products when product data arrives
+      if (product.category) {
+        queryClient.prefetchQuery({
+          queryKey: ['relatedProducts', product.category, productSlug],
+          queryFn: () => fetchRelatedProducts(product.category, productSlug)
+        });
+        }
     }
-  };
+  }, [product, productSlug, queryClient]);
+  
+  // Fetch related products, only after product is loaded
+  const { 
+    data: relatedProducts = []
+  } = useQuery<Product[]>({
+    queryKey: ['relatedProducts', product?.category, productSlug],
+    queryFn: () => fetchRelatedProducts(product?.category || '', productSlug),
+    enabled: !!product?.category,
+    staleTime: 1000 * 60 * 10, // Consider data fresh for 10 minutes
+    refetchOnWindowFocus: false,
+    refetchOnMount: false
+  });
 
   // Handle scroll to show/hide fixed buttons
   useEffect(() => {
     const handleScroll = () => {
-      // Find the buy button section element
       const buyButtonSection = document.getElementById('product-buy-buttons');
       if (buyButtonSection) {
         const rect = buyButtonSection.getBoundingClientRect();
-        // Show fixed buttons when the original buttons scroll out of view
         setShowFixedButtons(rect.bottom < 0);
       }
     };
 
-    // Add scroll event listener
     window.addEventListener('scroll', handleScroll);
-    
-    // Clean up on unmount
-    return () => {
-      window.removeEventListener('scroll', handleScroll);
-    };
+    return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Handle slide change
+  // Handle carousel slide change
   useEffect(() => {
     if (!carouselApi) return;
 
     const onSelect = () => {
       setCurrentSlide(carouselApi.selectedScrollSnap());
-      // Reset progress when slide changes
       setAutoplayProgress(0);
     };
 
     carouselApi.on("select", onSelect);
     
-    // Start autoplay
+    // Auto-advance carousel
     const autoplayInterval = setInterval(() => {
       if (carouselApi.canScrollNext()) {
         carouselApi.scrollNext();
       } else {
         carouselApi.scrollTo(0);
       }
-    }, autoplayDuration); // Change slide every 5 seconds
+    }, autoplayDuration);
     
-    // Progress animation
+    // Progress indicator
     const progressInterval = setInterval(() => {
       setAutoplayProgress((prev) => {
         const newProgress = prev + (100 / (autoplayDuration / 100));
@@ -554,27 +588,20 @@ export default function ProductDetailPage() {
     };
   }, [carouselApi]);
 
-  // Reset progress when clicking on indicators
+  // Handle carousel navigation
   const scrollToSlide = useCallback((index: number) => {
     if (!carouselApi) return;
     carouselApi.scrollTo(index);
     setAutoplayProgress(0);
   }, [carouselApi]);
 
-  const incrementQuantity = () => {
-    setQuantity(prev => prev + 1);
-  };
+  const incrementQuantity = () => setQuantity(prev => prev + 1);
+  const decrementQuantity = () => quantity > 1 && setQuantity(prev => prev - 1);
 
-  const decrementQuantity = () => {
-    if (quantity > 1) {
-      setQuantity(prev => prev - 1);
-    }
-  };
-
-  // Get display products for the carousel
+  // Get display products for the carousel, with fallback
   const displayProducts = relatedProducts.length > 0 
     ? relatedProducts 
-    : productsData.filter(p => p.slug !== (Array.isArray(slug) ? slug[0] : slug)).slice(0, 4);
+    : productsData.filter(p => p.slug !== productSlug).slice(0, 4);
 
   const handleShare = (platform: string) => {
     const url = window.location.href;
@@ -589,7 +616,6 @@ export default function ProductDetailPage() {
         window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`, '_blank');
         break;
       case 'instagram':
-        // Instagram doesn't support direct sharing, so we'll just copy the URL
         navigator.clipboard.writeText(url);
         break;
       case 'email':
@@ -599,18 +625,14 @@ export default function ProductDetailPage() {
     setShowShareMenu(false);
   };
 
-  const toggleWishlist = () => {
-    setIsWishlisted(!isWishlisted);
-  };
+  const toggleWishlist = () => setIsWishlisted(!isWishlisted);
 
-  // Animation variants for staggered animation
+  // Animation variants
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
       opacity: 1,
-      transition: {
-        staggerChildren: 0.1
-      }
+      transition: { staggerChildren: 0.1 }
     }
   };
 
@@ -628,31 +650,27 @@ export default function ProductDetailPage() {
   };
 
   // Function to render star ratings
-  const renderStars = (rating: number) => {
+  const renderStars = useCallback((rating: number) => {
     const stars = [];
     for (let i = 1; i <= 5; i++) {
       if (i <= rating) {
-        stars.push(
-          <Star key={i} size={16} className="fill-black text-black" />
-        );
+        stars.push(<Star key={i} size={16} className="fill-black text-black" />);
       } else {
-        stars.push(
-          <Star key={i} size={16} className="text-gray-300" />
-        );
+        stars.push(<Star key={i} size={16} className="text-gray-300" />);
       }
     }
     return stars;
-  };
+  }, []);
 
   // Filter reviews based on selection
-  const getFilteredReviews = () => {
+  const getFilteredReviews = useCallback(() => {
     if (!product?.reviews) return [];
     
     if (reviewFilter === 'all') return product.reviews;
     
     const rating = parseInt(reviewFilter);
     return product.reviews.filter(review => review.rating === rating);
-  };
+  }, [product?.reviews, reviewFilter]);
 
   // Get the reviews to display (limited or all)
   const displayReviews = showAllReviews 
@@ -660,7 +678,7 @@ export default function ProductDetailPage() {
     : getFilteredReviews().slice(0, 3);
 
   // Count reviews by rating
-  const getRatingCounts = () => {
+  const getRatingCounts = useCallback(() => {
     const counts: Record<number, number> = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
     
     if (product?.reviews) {
@@ -670,79 +688,37 @@ export default function ProductDetailPage() {
     }
     
     return counts;
-  };
+  }, [product?.reviews]);
 
   const ratingCounts = getRatingCounts();
 
+  // Lightweight loading skeleton
   if (isLoading) {
     return (
       <div className="bg-white">
         <Header />
         <main className="max-w-7xl mx-auto px-4 py-8">
-          {/* Simplified breadcrumb skeleton */}
           <div className="flex items-center gap-2 mb-8">
             <div className="h-2 w-14 bg-gray-100 rounded-full"></div>
             <div className="h-2 w-2 bg-gray-100 rounded-full"></div>
             <div className="h-2 w-20 bg-gray-100 rounded-full"></div>
-            <div className="h-2 w-2 bg-gray-100 rounded-full"></div>
-            <div className="h-2 w-24 bg-gray-100 rounded-full"></div>
           </div>
           
-          {/* Simplified product layout skeleton */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-            {/* Left column - Image gallery skeleton */}
-            <div>
-              {/* Main image - single clean block */}
-              <div className="aspect-square w-full bg-gray-50 rounded-2xl"></div>
-            </div>
-
-            {/* Right column - Product info skeleton */}
-            <div className="space-y-6">
-              {/* Product title */}
-              <div className="space-y-3">
-                <div className="h-5 w-2/3 bg-gray-50 rounded-full"></div>
-                <div className="h-5 w-1/2 bg-gray-50 rounded-full"></div>
-              </div>
-              
-              {/* Rating */}
-              <div className="flex gap-4 items-center">
-                <div className="h-3 w-20 bg-gray-50 rounded-full"></div>
-                <div className="h-3 w-16 bg-gray-50 rounded-full"></div>
-              </div>
-              
-              {/* Description */}
+            {/* Simplified loading UI for better performance */}
+            <div className="aspect-square w-full bg-gray-50 rounded-2xl animate-pulse"></div>
+            <div className="space-y-4">
+              <div className="h-8 w-3/4 bg-gray-50 rounded-full animate-pulse"></div>
+              <div className="h-4 w-1/2 bg-gray-50 rounded-full animate-pulse"></div>
               <div className="space-y-2">
-                <div className="h-3 w-full bg-gray-50 rounded-full"></div>
-                <div className="h-3 w-full bg-gray-50 rounded-full"></div>
-                <div className="h-3 w-4/5 bg-gray-50 rounded-full"></div>
+                <div className="h-4 w-full bg-gray-50 rounded-full animate-pulse"></div>
+                <div className="h-4 w-full bg-gray-50 rounded-full animate-pulse"></div>
               </div>
-              
-              {/* Price */}
-              <div className="h-6 w-24 bg-gray-50 rounded-full"></div>
-              
-              {/* Delivery boxes - simplified */}
-              <div className="space-y-3 pt-2">
-                <div className="h-12 w-full bg-gray-50 rounded-xl"></div>
-                <div className="h-12 w-full bg-gray-50 rounded-xl"></div>
-                <div className="h-12 w-full bg-gray-50 rounded-xl"></div>
-              </div>
-              
-              {/* Buttons - simplified */}
+              <div className="h-8 w-1/3 bg-gray-50 rounded-full animate-pulse"></div>
               <div className="flex gap-3 pt-4">
-                <div className="h-11 flex-1 bg-gray-50 rounded-full"></div>
-                <div className="h-11 flex-1 bg-gray-50 rounded-full"></div>
+                <div className="h-11 flex-1 bg-gray-50 rounded-full animate-pulse"></div>
+                <div className="h-11 flex-1 bg-gray-50 rounded-full animate-pulse"></div>
               </div>
-            </div>
-          </div>
-          
-          {/* Simplified product information section skeleton */}
-          <div className="mt-16 space-y-6">
-            <div className="h-4 w-32 bg-gray-50 rounded-full"></div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-              <div className="h-40 md:col-span-2 lg:col-span-2 bg-gray-50 rounded-3xl"></div>
-              <div className="h-40 bg-gray-50 rounded-3xl"></div>
-              <div className="h-40 md:col-span-3 lg:col-span-3 bg-gray-50 rounded-3xl"></div>
             </div>
           </div>
         </main>
@@ -751,7 +727,8 @@ export default function ProductDetailPage() {
     );
   }
 
-  if (!product) {
+  // Error state
+  if (isError || !product) {
     return (
       <div className="bg-white">
         <Header />
@@ -775,9 +752,9 @@ export default function ProductDetailPage() {
   return (
     <div className="bg-white">
       <Header />
-      
+      <Suspense fallback={<div className="h-[50vh] flex items-center justify-center">Loading...</div>}>
       <main>
-        {/* Breadcrumb navigation - Simplified */}
+          {/* Breadcrumb navigation */}
         <div className="max-w-7xl mx-auto px-4 py-3">
           <nav className="flex text-sm text-gray-500">
             <Link href="/" className="hover:text-black">Home</Link>
@@ -788,13 +765,13 @@ export default function ProductDetailPage() {
           </nav>
         </div>
         
-        {/* Product detail section - Flattened */}
+          {/* Product detail section - Optimized for performance */}
         <section className="max-w-7xl mx-auto px-4 py-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {/* Left: Product Image Gallery - Simplified */}
+              {/* Left: Product Image Gallery */}
             <div className="relative lg:sticky lg:top-24">
               <div className="relative">
-                {/* Carousel - Enhanced UI */}
+                  {/* Carousel */}
                 <div className="relative overflow-hidden rounded-xl">
                   <Carousel className="w-full" setApi={setCarouselApi} opts={{ loop: true }}>
                   <CarouselContent>
@@ -805,21 +782,24 @@ export default function ProductDetailPage() {
                             src={image} 
                             alt={`${product.name} - Image ${index + 1}`}
                             fill
+                                sizes="(max-width: 768px) 100vw, 50vw"
+                                loading={index === 0 ? "eager" : "lazy"}
                               className="object-cover hover:scale-105 transition-transform duration-700"
                             priority={index === 0}
+                                quality={index === 0 ? 85 : 75}
                           />
                         </div>
                       </CarouselItem>
                     ))}
                   </CarouselContent>
                     
-                    {/* Enhanced carousel controls */}
+                      {/* Carousel controls */}
                     <div className="absolute inset-0 flex items-center justify-between pointer-events-none px-4">
                       <CarouselPrevious className="h-9 w-9 rounded-full bg-white/70 backdrop-blur-sm hover:bg-white border-0 shadow-md pointer-events-auto text-black transition-all hover:scale-110" />
                       <CarouselNext className="h-9 w-9 rounded-full bg-white/70 backdrop-blur-sm hover:bg-white border-0 shadow-md pointer-events-auto text-black transition-all hover:scale-110" />
                     </div>
                     
-                    {/* Progress dots - Functional indicators with loading animation */}
+                      {/* Progress dots */}
                     <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-1.5">
                       {product.images.map((_, index) => (
                         <button 
@@ -842,7 +822,7 @@ export default function ProductDetailPage() {
                 </Carousel>
                 </div>
                 
-                {/* Thumbnail images - Enhanced UI */}
+                  {/* Thumbnail images */}
                 <div className="flex overflow-x-auto gap-2 mt-4 pb-1 scrollbar-hide">
                   {product.images.map((image: string, index: number) => (
                     <button 
@@ -857,7 +837,10 @@ export default function ProductDetailPage() {
                           src={image}
                           alt={`${product.name} - Thumbnail ${index + 1}`}
                           fill
+                            sizes="80px"
                           className="object-cover group-hover:scale-105 transition-all duration-300"
+                            loading="lazy"
+                            quality={60}
                         />
                         {index === currentSlide && (
                           <div className="absolute inset-0 border-2 border-black rounded-md" />
@@ -869,14 +852,14 @@ export default function ProductDetailPage() {
               </div>
             </div>
             
-            {/* Right: Product Info - Minimal */}
+              {/* Right: Product Info */}
             <div className="flex flex-col">
-              {/* Product Header - Simplified */}
+                {/* Product Header */}
               <div className="mb-4">
                 <div className="flex items-center justify-between mb-3">
                   <h1 className="text-2xl font-bold">{product.name}</h1>
                   
-                  {/* Action buttons - Simplified */}
+                    {/* Action buttons */}
                   <div className="flex items-center gap-2">
                     <button
                       onClick={toggleWishlist}
@@ -974,7 +957,7 @@ export default function ProductDetailPage() {
                   )}
                 </div>
                 
-                {/* Tags - Simplified */}
+                  {/* Tags */}
                 {product.tags && product.tags.length > 0 && (
                   <div className="flex flex-wrap gap-2 mb-4">
                     {product.tags.map((tag, index) => (
@@ -1046,7 +1029,7 @@ export default function ProductDetailPage() {
                   </div>
                 </div>
                 
-                {/* Add to cart and buy now buttons - Same row */}
+                  {/* Add to cart and buy now buttons */}
                 <div className="flex gap-3 mb-6">
                   <Button className="flex-1 bg-black hover:bg-black/90 text-white rounded-full py-6 h-12 text-sm font-medium transition-all duration-300 flex items-center justify-center gap-2 cursor-pointer">
                     <span>Buy Now</span>
@@ -1058,260 +1041,262 @@ export default function ProductDetailPage() {
                   </Button>
                 </div>
               </div>
-              
                       </div>
               </div>
         </section>
         
-        {/* Product Information Bento Grid */}
-        <section className="max-w-7xl mx-auto px-4 py-16">
-          <h2 className="text-xl font-bold mb-8">Product Information</h2>
-                  
-          {/* Main grid layout - Rearranged for better visual balance */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {/* Product Details - Spanning 2/3 columns */}
-            <div className="bg-gray-50/70 rounded-2xl p-6 md:col-span-2 lg:col-span-2">
-              <h3 className="text-lg font-bold mb-4">Product Details</h3>
-              <p className="text-sm text-gray-700">{product?.longDescription}</p>
-                      </div>
-
-            {/* Features Card - Now on the right side */}
-            <div className="bg-gray-50/70 rounded-2xl p-6 md:col-span-1 lg:col-span-1 row-span-2">
-              <h3 className="text-lg font-bold mb-4">Key Features</h3>
-              <ul className="space-y-3">
-                {product?.features.map((feature, index) => (
-                          <li key={index} className="flex items-start">
-                    <div className="h-6 w-6 rounded-full bg-black flex items-center justify-center text-white mr-3 mt-0.5 flex-shrink-0 text-xs font-medium">
-                      {index + 1}
-                            </div>
-                    <span className="text-sm text-gray-700 pt-1">{feature}</span>
-                          </li>
-                        ))}
-                      </ul>
-            </div>
-
-            {/* Customer Rating - Moved below product details */}
-            <div className="bg-gray-50/70 rounded-2xl p-6 md:col-span-1 lg:col-span-1">
-              <h3 className="text-lg font-bold mb-4">Customer Rating</h3>
-              <div className="flex items-center justify-center mb-4">
-                <div className="flex flex-col items-center">
-                  <div className="text-5xl font-bold mb-1">{product?.rating.toFixed(1)}</div>
-                  <div className="flex mb-1">
-                    {renderStars(Math.round(product?.rating || 0))}
+          {/* Lazy load remaining sections */}
+          <Suspense fallback={<div className="h-32"></div>}>
+            <>
+              {/* Product Information Bento Grid */}
+              <section className="max-w-7xl mx-auto px-4 py-16">
+                <h2 className="text-xl font-bold mb-8">Product Information</h2>
+                        
+                {/* Main grid layout - Rearranged for better visual balance */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                  {/* Product Details - Spanning 2/3 columns */}
+                  <div className="bg-gray-50/70 rounded-2xl p-6 md:col-span-2 lg:col-span-2">
+                    <h3 className="text-lg font-bold mb-4">Product Details</h3>
+                    <p className="text-sm text-gray-700">{product?.longDescription}</p>
                   </div>
-                  <span className="text-xs text-gray-500">Based on {product?.reviewCount} reviews</span>
-                </div>
-              </div>
-              
-              {/* Rating bars */}
-              <div className="space-y-2 mt-2">
-                {[5, 4, 3, 2, 1].map(rating => {
-                  const count = product?.reviews?.filter(r => r.rating === rating).length || 0;
-                  const percentage = product?.reviewCount 
-                    ? (count / product.reviewCount) * 100 
-                    : 0;
-                  
-                  return (
-                    <div key={rating} className="flex items-center gap-2">
-                      <span className="text-xs text-gray-500 w-2">{rating}</span>
-                      <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                        <div 
-                          className="h-full bg-black" 
-                          style={{ width: `${percentage}%` }}
-                        />
-                      </div>
-                      <span className="text-xs text-gray-500 w-6 text-right">
-                        {count}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
 
-            {/* Technical Specs - Now below rating */}
-            <div className="bg-gray-50/70 rounded-2xl p-6 md:col-span-1 lg:col-span-1">
-              <h3 className="text-lg font-bold mb-4">Technical Specs</h3>
-              <div className="space-y-3">
-                {Object.entries(product?.specs || {}).map(([key, value]) => (
-                          <div key={key} className="flex flex-col border-b border-gray-100 pb-2">
-                            <dt className="text-xs text-gray-500 uppercase tracking-wider mb-1">{key.replace(/([A-Z])/g, ' $1').trim()}</dt>
-                            <dd className="text-sm font-medium">{String(value)}</dd>
+                  {/* Features Card - Now on the right side */}
+                  <div className="bg-gray-50/70 rounded-2xl p-6 md:col-span-1 lg:col-span-1 row-span-2">
+                    <h3 className="text-lg font-bold mb-4">Key Features</h3>
+                    <ul className="space-y-3">
+                      {product?.features.map((feature, index) => (
+                                <li key={index} className="flex items-start">
+                          <div className="h-6 w-6 rounded-full bg-black flex items-center justify-center text-white mr-3 mt-0.5 flex-shrink-0 text-xs font-medium">
+                            {index + 1}
+                                  </div>
+                          <span className="text-sm text-gray-700 pt-1">{feature}</span>
+                                </li>
+                              ))}
+                            </ul>
+                  </div>
+
+                  {/* Customer Rating - Moved below product details */}
+                  <div className="bg-gray-50/70 rounded-2xl p-6 md:col-span-1 lg:col-span-1">
+                    <h3 className="text-lg font-bold mb-4">Customer Rating</h3>
+                    <div className="flex items-center justify-center mb-4">
+                      <div className="flex flex-col items-center">
+                        <div className="text-5xl font-bold mb-1">{product?.rating.toFixed(1)}</div>
+                        <div className="flex mb-1">
+                          {renderStars(Math.round(product?.rating || 0))}
+                        </div>
+                        <span className="text-xs text-gray-500">Based on {product?.reviewCount} reviews</span>
+                      </div>
+                    </div>
+                    
+                    {/* Rating bars */}
+                    <div className="space-y-2 mt-2">
+                      {[5, 4, 3, 2, 1].map(rating => {
+                        const count = product?.reviews?.filter(r => r.rating === rating).length || 0;
+                        const percentage = product?.reviewCount 
+                          ? (count / product.reviewCount) * 100 
+                          : 0;
+                        
+                        return (
+                          <div key={rating} className="flex items-center gap-2">
+                            <span className="text-xs text-gray-500 w-2">{rating}</span>
+                            <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                              <div 
+                                className="h-full bg-black" 
+                                style={{ width: `${percentage}%` }}
+                              />
+                            </div>
+                            <span className="text-xs text-gray-500 w-6 text-right">
+                              {count}
+                            </span>
                           </div>
-                        ))}
-                      </div>
-              </div>
-
-            {/* In The Box - Full width at the bottom */}
-            <div className="bg-gray-50/70 rounded-2xl p-6 md:col-span-2 lg:col-span-3">
-              <h3 className="text-lg font-bold mb-4">In The Box</h3>
-              <ul className="space-y-2">
-                {product.specs.boxContents ? (
-                  product.specs.boxContents.split(',').map((item, index) => (
-                    <li key={index} className="flex items-center">
-                      <div className="h-1.5 w-1.5 rounded-full bg-black mr-2"></div>
-                      <span className="text-sm">{item.trim()}</span>
-                    </li>
-                  ))
-                ) : (
-                  <>
-                    <li className="flex items-center">
-                      <div className="h-1.5 w-1.5 rounded-full bg-black mr-2"></div>
-                      <span className="text-sm">{product?.name}</span>
-                    </li>
-                    <li className="flex items-center">
-                      <div className="h-1.5 w-1.5 rounded-full bg-black mr-2"></div>
-                      <span className="text-sm">USB Cable</span>
-                    </li>
-                    <li className="flex items-center">
-                      <div className="h-1.5 w-1.5 rounded-full bg-black mr-2"></div>
-                      <span className="text-sm">Power Adapter</span>
-                    </li>
-                    <li className="flex items-center">
-                      <div className="h-1.5 w-1.5 rounded-full bg-black mr-2"></div>
-                      <span className="text-sm">Quick Start Guide</span>
-                    </li>
-                  </>
-                )}
-              </ul>
-            </div>
-          </div>
-        </section>
-        
-        {/* Reviews section - Redesigned with cleaner UI */}
-        <section className="max-w-7xl mx-auto px-4 py-14">
-          <div className="mb-8">
-            <h2 className="text-xl font-bold mb-2">Customer Reviews</h2>
-            
-            {/* Overall rating and compact filters */}
-            <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
-              <div className="flex items-center gap-6">
-                {/* Overall rating */}
-                <div className="flex items-center gap-3">
-                  <div className="text-3xl font-medium">{product?.rating.toFixed(1)}</div>
-                  <div className="flex flex-col">
-                    <div className="flex">
-                      {renderStars(Math.round(product?.rating || 0))}
+                        );
+                      })}
                     </div>
-                    <div className="text-xs text-gray-500">
-                      {product?.reviewCount} reviews
+                  </div>
+
+                  {/* Technical Specs - Now below rating */}
+                  <div className="bg-gray-50/70 rounded-2xl p-6 md:col-span-1 lg:col-span-1">
+                    <h3 className="text-lg font-bold mb-4">Technical Specs</h3>
+                    <div className="space-y-3">
+                      {Object.entries(product?.specs || {}).map(([key, value]) => (
+                                <div key={key} className="flex flex-col border-b border-gray-100 pb-2">
+                                  <dt className="text-xs text-gray-500 uppercase tracking-wider mb-1">{key.replace(/([A-Z])/g, ' $1').trim()}</dt>
+                                  <dd className="text-sm font-medium">{String(value)}</dd>
+                                </div>
+                              ))}
+                            </div>
+                    </div>
+
+                  {/* In The Box - Full width at the bottom */}
+                  <div className="bg-gray-50/70 rounded-2xl p-6 md:col-span-2 lg:col-span-3">
+                    <h3 className="text-lg font-bold mb-4">In The Box</h3>
+                    <ul className="space-y-2">
+                      {product.specs.boxContents ? (
+                        product.specs.boxContents.split(',').map((item, index) => (
+                          <li key={index} className="flex items-center">
+                            <div className="h-1.5 w-1.5 rounded-full bg-black mr-2"></div>
+                            <span className="text-sm">{item.trim()}</span>
+                          </li>
+                        ))
+                      ) : (
+                        <>
+                          <li className="flex items-center">
+                            <div className="h-1.5 w-1.5 rounded-full bg-black mr-2"></div>
+                            <span className="text-sm">{product?.name}</span>
+                          </li>
+                          <li className="flex items-center">
+                            <div className="h-1.5 w-1.5 rounded-full bg-black mr-2"></div>
+                            <span className="text-sm">USB Cable</span>
+                          </li>
+                          <li className="flex items-center">
+                            <div className="h-1.5 w-1.5 rounded-full bg-black mr-2"></div>
+                            <span className="text-sm">Power Adapter</span>
+                          </li>
+                          <li className="flex items-center">
+                            <div className="h-1.5 w-1.5 rounded-full bg-black mr-2"></div>
+                            <span className="text-sm">Quick Start Guide</span>
+                          </li>
+                        </>
+                      )}
+                    </ul>
+                  </div>
+                </div>
+              </section>
+              
+              {/* Reviews section - Redesigned with cleaner UI */}
+              <section className="max-w-7xl mx-auto px-4 py-14">
+                <div className="mb-8">
+                  <h2 className="text-xl font-bold mb-2">Customer Reviews</h2>
+                  
+                  {/* Overall rating and compact filters */}
+                  <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
+                    <div className="flex items-center gap-6">
+                      {/* Overall rating */}
+                      <div className="flex items-center gap-3">
+                        <div className="text-3xl font-medium">{product?.rating.toFixed(1)}</div>
+                        <div className="flex flex-col">
+                          <div className="flex">
+                            {renderStars(Math.round(product?.rating || 0))}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {product?.reviewCount} reviews
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Write review button */}
+                      <Button className="bg-black hover:bg-black/90 text-white rounded-full h-9 px-5 text-sm font-medium cursor-pointer">
+                        Write a Review
+                      </Button>
+                    </div>
+                    
+                    {/* Compact filters */}
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className="text-sm text-gray-500 mr-1">Filter:</span>
+                      <button 
+                        onClick={() => setReviewFilter('all')}
+                        className={`px-3 py-1 text-xs rounded-full ${
+                          reviewFilter === 'all' 
+                            ? 'bg-black text-white' 
+                            : 'bg-gray-100 hover:bg-gray-200 text-gray-800'
+                        }`}
+                      >
+                        All
+                      </button>
+                      {[5, 4, 3, 2, 1].map(rating => (
+                        <button 
+                          key={rating}
+                          onClick={() => setReviewFilter(rating.toString())}
+                          className={`px-3 py-1 text-xs rounded-full flex items-center gap-1 ${
+                            reviewFilter === rating.toString() 
+                              ? 'bg-black text-white' 
+                              : 'bg-gray-100 hover:bg-gray-200 text-gray-800'
+                          }`}
+                        >
+                          {rating}
+                          <Star size={10} className="fill-current" />
+                          <span className="opacity-75">({ratingCounts[rating]})</span>
+                        </button>
+                      ))}
                     </div>
                   </div>
                 </div>
                 
-                {/* Write review button */}
-                <Button className="bg-black hover:bg-black/90 text-white rounded-full h-9 px-5 text-sm font-medium cursor-pointer">
-                  Write a Review
-                </Button>
-              </div>
-              
-              {/* Compact filters */}
-              <div className="flex flex-wrap items-center gap-1.5">
-                <span className="text-sm text-gray-500 mr-1">Filter:</span>
-                <button 
-                  onClick={() => setReviewFilter('all')}
-                  className={`px-3 py-1 text-xs rounded-full ${
-                    reviewFilter === 'all' 
-                      ? 'bg-black text-white' 
-                      : 'bg-gray-100 hover:bg-gray-200 text-gray-800'
-                  }`}
-                >
-                  All
-                </button>
-                {[5, 4, 3, 2, 1].map(rating => (
-                  <button 
-                    key={rating}
-                    onClick={() => setReviewFilter(rating.toString())}
-                    className={`px-3 py-1 text-xs rounded-full flex items-center gap-1 ${
-                      reviewFilter === rating.toString() 
-                        ? 'bg-black text-white' 
-                        : 'bg-gray-100 hover:bg-gray-200 text-gray-800'
-                    }`}
-                  >
-                    {rating}
-                    <Star size={10} className="fill-current" />
-                    <span className="opacity-75">({ratingCounts[rating]})</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-          
-          {/* Reviews list - Minimalist design */}
-          {displayReviews.length > 0 ? (
-            <>
-              <div className="grid grid-cols-1 gap-3">
-                {displayReviews.map((review) => (
-                  <div key={review.id} className="rounded-lg p-5 bg-gray-50/50">
-                    <div className="flex items-start gap-4">
-                      {/* Review left side - user info */}
-                      <div className="hidden sm:block">
-                        <div className="w-11 h-11 bg-gray-100 rounded-full flex items-center justify-center overflow-hidden">
-                          <span className="text-lg font-medium text-gray-600">{review.username.charAt(0).toUpperCase()}</span>
-                        </div>
-                      </div>
-                      
-                      {/* Review right side - content */}
-                      <div className="flex-1">
-                        {/* Header with rating and date */}
-                        <div className="flex flex-wrap items-center gap-2 mb-3">
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium">{review.username}</span>
-                              {review.verified && (
-                                <span className="text-xs bg-gray-100 text-gray-700 px-2 py-0.5 rounded-full flex items-center">
-                                  <Check size={10} className="mr-0.5" />
-                                  Verified
-                                </span>
-                              )}
-                            </div>
-                            <div className="flex items-center mt-1">
-                              <div className="flex">
-                                {renderStars(review.rating)}
+                {/* Reviews list - Minimalist design */}
+                {displayReviews.length > 0 ? (
+                  <>
+                    <div className="grid grid-cols-1 gap-3">
+                      {displayReviews.map((review) => (
+                        <div key={review.id} className="rounded-lg p-5 bg-gray-50/50">
+                          <div className="flex items-start gap-4">
+                            {/* Review left side - user info */}
+                            <div className="hidden sm:block">
+                              <div className="w-11 h-11 bg-gray-100 rounded-full flex items-center justify-center overflow-hidden">
+                                <span className="text-lg font-medium text-gray-600">{review.username.charAt(0).toUpperCase()}</span>
                               </div>
-                              <span className="text-xs text-gray-500 ml-2">{review.date}</span>
+                            </div>
+                            
+                            {/* Review right side - content */}
+                            <div className="flex-1">
+                              {/* Header with rating and date */}
+                              <div className="flex flex-wrap items-center gap-2 mb-3">
+                                <div>
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-medium">{review.username}</span>
+                                    {review.verified && (
+                                      <span className="text-xs bg-gray-100 text-gray-700 px-2 py-0.5 rounded-full flex items-center">
+                                        <Check size={10} className="mr-0.5" />
+                                        Verified
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="flex items-center mt-1">
+                                    <div className="flex">
+                                      {renderStars(review.rating)}
+                                    </div>
+                                    <span className="text-xs text-gray-500 ml-2">{review.date}</span>
+                                  </div>
+                                </div>
+                              </div>
+                              
+                              {/* Review title and content */}
+                              <h4 className="font-medium mb-2">{review.title}</h4>
+                              <p className="text-gray-600 text-sm">{review.comment}</p>
                             </div>
                           </div>
                         </div>
-                        
-                        {/* Review title and content */}
-                        <h4 className="font-medium mb-2">{review.title}</h4>
-                        <p className="text-gray-600 text-sm">{review.comment}</p>
-                      </div>
+                      ))}
                     </div>
+                  
+                    {/* Show more button */}
+                    {!showAllReviews && getFilteredReviews().length > 4 && (
+                      <div className="flex justify-center mt-8">
+                        <Button 
+                          onClick={() => setShowAllReviews(true)}
+                          className="bg-black hover:bg-black/90 text-white rounded-full h-9 px-6 text-sm font-medium cursor-pointer"
+                        >
+                          Show all {getFilteredReviews().length} reviews
+                        </Button>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="rounded-lg py-12 px-6 text-center bg-gray-50/50">
+                    <div className="mx-auto w-12 h-12 border border-gray-200 rounded-full flex items-center justify-center mb-3">
+                      <Star size={20} className="text-gray-300" />
+                    </div>
+                    <h3 className="text-lg font-medium mb-1">No reviews yet</h3>
+                    <p className="text-gray-500 text-sm max-w-md mx-auto mb-4">
+                      There are no reviews matching your filter. Try another filter or be the first to review this product.
+                    </p>
+                    <Button className="bg-black hover:bg-black/90 text-white rounded-full h-9 px-5 text-sm font-medium cursor-pointer inline-flex">
+                      Write a Review
+                    </Button>
                   </div>
-                ))}
-              </div>
-            
-              {/* Show more button */}
-              {!showAllReviews && getFilteredReviews().length > 4 && (
-                <div className="flex justify-center mt-8">
-                  <Button 
-                    onClick={() => setShowAllReviews(true)}
-                    className="bg-black hover:bg-black/90 text-white rounded-full h-9 px-6 text-sm font-medium cursor-pointer"
-                  >
-                    Show all {getFilteredReviews().length} reviews
-                  </Button>
-                </div>
-              )}
-            </>
-          ) : (
-            <div className="rounded-lg py-12 px-6 text-center bg-gray-50/50">
-              <div className="mx-auto w-12 h-12 border border-gray-200 rounded-full flex items-center justify-center mb-3">
-                <Star size={20} className="text-gray-300" />
-              </div>
-              <h3 className="text-lg font-medium mb-1">No reviews yet</h3>
-              <p className="text-gray-500 text-sm max-w-md mx-auto mb-4">
-                There are no reviews matching your filter. Try another filter or be the first to review this product.
-              </p>
-              <Button className="bg-black hover:bg-black/90 text-white rounded-full h-9 px-5 text-sm font-medium cursor-pointer inline-flex">
-                Write a Review
-              </Button>
-            </div>
-          )}
-        </section>
-        
-        {/* Related products - Simplified */}
+                )}
+              </section>
+
+              {/* Related Products Section */}
         <section className="max-w-7xl mx-auto px-4 py-12">
           <h2 className="text-xl font-bold mb-6">You might also like</h2>
           
@@ -1327,8 +1312,8 @@ export default function ProductDetailPage() {
               {displayProducts.map((relProduct) => (
                 <CarouselItem key={relProduct.id} className="pl-2 basis-full sm:basis-1/2 md:basis-1/3 lg:basis-1/4 h-full">
                   <div className="h-full">
-                    <ProductCard
-                      id={relProduct.slug}
+                    <ClientProductCard
+                            id={relProduct.id}
                       name={relProduct.name}
                       price={relProduct.price}
                       description={relProduct.description}
@@ -1336,6 +1321,7 @@ export default function ProductDetailPage() {
                       reviewCount={relProduct.reviewCount}
                       image={relProduct.images[0]}
                       isBestseller={relProduct.isBestseller}
+                            slug={relProduct.slug}
                     />
                   </div>
                 </CarouselItem>
@@ -1345,7 +1331,10 @@ export default function ProductDetailPage() {
             <CarouselNext className="right-1 bg-white border border-gray-200 hover:bg-gray-50 text-black hover:text-black rounded-full" />
           </Carousel>
         </section>
+            </>
+          </Suspense>
       </main>
+      </Suspense>
       
       {/* Fixed buttons at bottom of screen */}
       <AnimatePresence>

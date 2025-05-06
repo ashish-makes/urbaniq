@@ -1,10 +1,13 @@
 import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
+// We're going to handle OAuth account creation manually instead of using the adapter
+// since there are type issues with the adapter
 import prisma from "@/lib/prisma";
 import bcrypt from "bcrypt";
 
 export const authOptions: NextAuthOptions = {
+  // Not using the adapter due to type incompatibilities
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID as string,
@@ -75,6 +78,25 @@ export const authOptions: NextAuthOptions = {
             token.role = dbUser.role;
             token.id = dbUser.id;
             console.log('Updated token from database:', { role: dbUser.role, id: dbUser.id });
+          } else {
+            // If we get here, the user exists in the session but not in the database
+            // Let's create them
+            console.log('User exists in session but not in database. Creating user:', token.email);
+            try {
+              const newUser = await prisma.user.create({
+                data: {
+                  email: token.email as string,
+                  name: token.name as string || 'Google User',
+                  role: 'USER',
+                  emailVerified: new Date(),
+                }
+              });
+              console.log('Successfully created missing user:', newUser.id);
+              token.id = newUser.id;
+              token.role = 'USER';
+            } catch (userCreateError) {
+              console.error('Failed to create missing user:', userCreateError);
+            }
           }
         } catch (error) {
           console.error('Error fetching user data for JWT:', error);
@@ -100,7 +122,7 @@ export const authOptions: NextAuthOptions = {
       console.log('SignIn callback - account:', account);
       console.log('SignIn callback - profile:', profile);
       
-      // For Google OAuth, ensure user has role in database
+      // For Google OAuth, ensure user is properly created with default role
       if (account?.provider === 'google' && profile?.email) {
         try {
           // Check if user exists
@@ -118,8 +140,38 @@ export const authOptions: NextAuthOptions = {
               console.log('Updated existing Google user with default role');
             }
           } else {
-            // For new users via Google, create with default role
-            console.log('Creating new user from Google OAuth');
+            // Create the user manually since we're not using the adapter
+            console.log('Creating new Google user:', profile.email);
+            try {
+              const newUser = await prisma.user.create({
+                data: {
+                  email: profile.email,
+                  name: profile.name || 'Google User',
+                  role: 'USER',
+                  emailVerified: new Date(),
+                }
+              });
+              
+              // Also create the account linking
+              await prisma.account.create({
+                data: {
+                  userId: newUser.id,
+                  type: account.type,
+                  provider: account.provider,
+                  providerAccountId: account.providerAccountId,
+                  access_token: account.access_token as string || null,
+                  id_token: account.id_token as string || null,
+                  refresh_token: account.refresh_token as string || null,
+                  expires_at: account.expires_at as number || null,
+                  token_type: account.token_type as string || null,
+                  scope: account.scope as string || null,
+                }
+              });
+              
+              console.log('Successfully created Google user and account');
+            } catch (createError) {
+              console.error('Error creating Google user:', createError);
+            }
           }
         } catch (error) {
           console.error('Error handling Google sign in:', error);
@@ -141,5 +193,6 @@ export const authOptions: NextAuthOptions = {
     verifyRequest: '/verification-pending',
     newUser: '/signup'
   },
-  secret: process.env.NEXTAUTH_SECRET
+  secret: process.env.NEXTAUTH_SECRET,
+  debug: process.env.NODE_ENV !== 'production',
 }; 

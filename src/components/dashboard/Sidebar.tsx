@@ -89,6 +89,11 @@ export function Sidebar({ isCollapsed, setIsCollapsed, isMobile = false }: Sideb
       icon: Users,
     },
     {
+      title: 'Categories',
+      href: '/admin/categories',
+      icon: ListOrdered,
+    },
+    {
       title: 'Products',
       href: '/admin/products',
       icon: Store,

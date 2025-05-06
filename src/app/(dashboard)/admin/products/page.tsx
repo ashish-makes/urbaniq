@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface Product {
   id: string;
@@ -32,6 +33,8 @@ interface Product {
   originalPrice: number | null;
   stock: number;
   category: string;
+  categoryId: string | null;
+  categoryName: string | null;
   images: string[];
   inStock: boolean;
   featured?: boolean;
@@ -104,6 +107,59 @@ export default function ProductsPage() {
     return { label: 'Active', variant: 'outline' };
   };
 
+  // Add ProductTableSkeleton component
+  const ProductTableSkeleton = () => {
+    return (
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead className="bg-gray-50 text-gray-600">
+            <tr className="border-b border-gray-100">
+              <th className="px-3 py-2 text-left font-medium">Product</th>
+              <th className="px-3 py-2 text-left font-medium">Category</th>
+              <th className="px-3 py-2 text-left font-medium">Price</th>
+              <th className="px-3 py-2 text-center font-medium">Stock</th>
+              <th className="px-3 py-2 text-left font-medium">Status</th>
+              <th className="px-3 py-2 text-center font-medium w-10">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-50">
+            {[...Array(5)].map((_, index) => (
+              <tr key={index} className="hover:bg-gray-50/50">
+                <td className="px-3 py-2.5">
+                  <div className="flex items-center gap-3">
+                    <Skeleton className="h-10 w-10 rounded" />
+                    <div className="min-w-0 space-y-1">
+                      <Skeleton className="h-4 w-[140px]" />
+                      <Skeleton className="h-3 w-[180px]" />
+                    </div>
+                  </div>
+                </td>
+                <td className="px-3 py-2.5">
+                  <Skeleton className="h-6 w-20 rounded-full" />
+                </td>
+                <td className="px-3 py-2.5">
+                  <div className="flex flex-col space-y-1">
+                    <Skeleton className="h-4 w-16" />
+                    <Skeleton className="h-3 w-24" />
+                  </div>
+                </td>
+                <td className="px-3 py-2.5 text-center">
+                  <Skeleton className="h-4 w-8 mx-auto" />
+                </td>
+                <td className="px-3 py-2.5">
+                  <Skeleton className="h-6 w-16 rounded-full" />
+                </td>
+                <td className="px-3 py-2.5 text-center">
+                  <Skeleton className="h-8 w-8 rounded-md mx-auto" />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
+  };
+
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
@@ -118,10 +174,7 @@ export default function ProductsPage() {
 
       <div className="bg-white rounded-lg overflow-hidden">
         {loading ? (
-          <div className="p-8 text-center">
-            <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
-            <p>Loading products...</p>
-          </div>
+          <ProductTableSkeleton />
         ) : products.length === 0 ? (
           <div className="p-8 text-center">
             <p className="text-gray-500 mb-4">No products found</p>
@@ -174,7 +227,7 @@ export default function ProductsPage() {
                       </td>
                       <td className="px-3 py-2.5">
                         <span className="px-2 py-1 bg-gray-50 text-gray-600 rounded-full text-xs">
-                          {product.category}
+                          {product.categoryName || product.category || 'Uncategorized'}
                         </span>
                       </td>
                       <td className="px-3 py-2.5">

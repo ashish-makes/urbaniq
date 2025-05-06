@@ -20,6 +20,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 
 type User = {
@@ -28,6 +29,47 @@ type User = {
   email: string;
   role: 'USER' | 'ADMIN';
   image: string | null;
+};
+
+const UserTableSkeleton = () => {
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-sm">
+        <thead className="bg-gray-50 text-gray-600">
+          <tr className="border-b border-gray-100">
+            <th className="px-4 py-3 text-left font-medium">User</th>
+            <th className="px-4 py-3 text-left font-medium">Email</th>
+            <th className="px-4 py-3 text-left font-medium">Role</th>
+            <th className="px-4 py-3 text-center font-medium w-10">Actions</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-gray-50">
+          {[...Array(5)].map((_, index) => (
+            <tr key={index} className="hover:bg-gray-50/50">
+              <td className="px-4 py-3">
+                <div className="flex items-center gap-3">
+                  <Skeleton className="h-10 w-10 rounded-full" />
+                  <div className="min-w-0 space-y-1">
+                    <Skeleton className="h-4 w-32" />
+                    <Skeleton className="h-3 w-16" />
+                  </div>
+                </div>
+              </td>
+              <td className="px-4 py-3">
+                <Skeleton className="h-4 w-[180px]" />
+              </td>
+              <td className="px-4 py-3">
+                <Skeleton className="h-6 w-20 rounded-full" />
+              </td>
+              <td className="px-4 py-3 text-center">
+                <Skeleton className="h-8 w-8 rounded-md mx-auto" />
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
 };
 
 export default function UsersPage() {
@@ -110,10 +152,7 @@ export default function UsersPage() {
 
       <div className="bg-white rounded-lg overflow-hidden">
         {loading ? (
-          <div className="p-8 text-center">
-            <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
-            <p>Loading users...</p>
-          </div>
+          <UserTableSkeleton />
         ) : users.length === 0 ? (
           <div className="p-8 text-center">
             <UserIcon className="h-12 w-12 text-gray-300 mx-auto mb-4" />

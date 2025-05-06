@@ -11,8 +11,11 @@ interface ProductCardProps {
   reviewCount: number;
   image: string;
   isBestseller?: boolean;
+  slug?: string;
+  onAddToCart?: () => void; // Optional callback for adding to cart
 }
 
+// Base ProductCard that works in both server and client components
 export function ProductCard({ 
   id, 
   name, 
@@ -21,8 +24,23 @@ export function ProductCard({
   rating, 
   reviewCount, 
   image, 
-  isBestseller = false 
+  isBestseller = false,
+  slug,
+  onAddToCart
 }: ProductCardProps) {
+  // Generate a proper URL-friendly slug by removing special characters and spaces
+  const generateSlug = (str: string) => {
+    return str
+      .toLowerCase()
+      .replace(/[^\w\s-]/g, '') // Remove special characters
+      .replace(/\s+/g, '-')     // Replace spaces with hyphens
+      .replace(/-+/g, '-')      // Replace multiple hyphens with single hyphen
+      .trim();                  // Trim leading/trailing spaces
+  };
+  
+  // Use slug if provided, otherwise generate it from name
+  const productSlug = slug || (name ? generateSlug(name) : id);
+
   return (
     <div className="bg-gray-50 rounded-2xl overflow-hidden group transition-all duration-500 relative flex flex-col h-full border border-gray-100 hover:bg-gray-100/50">
       {/* Bestseller badge */}
@@ -57,7 +75,7 @@ export function ProductCard({
       {/* Product info */}
       <div className="p-5 flex-1 flex flex-col">
         <div className="mb-auto">
-          <Link href={`/products/${id}`} className="block">
+          <Link href={`/products/${productSlug}`} className="block">
             <h3 className="font-medium text-base mb-1 transition-colors duration-200 group-hover:text-black/80">{name}</h3>
           </Link>
           
@@ -80,7 +98,10 @@ export function ProductCard({
           </div>
           
           {/* Add to cart button */}
-          <Button className="w-full bg-black hover:bg-black/90 text-white rounded-full py-6 h-10 text-sm font-medium transition-all duration-300 flex items-center justify-center gap-2 cursor-pointer">
+          <Button 
+            className="w-full bg-black hover:bg-black/90 text-white rounded-full py-6 h-10 text-sm font-medium transition-all duration-300 flex items-center justify-center gap-2 cursor-pointer" 
+            onClick={onAddToCart}
+          >
             <span className="mr-1">Add to cart</span>
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="9" cy="21" r="1" />
@@ -92,4 +113,7 @@ export function ProductCard({
       </div>
     </div>
   );
-} 
+}
+
+// Create a separate file for the client component to avoid the "use client" directive affecting imports
+export { ClientProductCard } from "./ClientProductCard"; 

@@ -154,6 +154,17 @@ exports.Prisma.VerificationTokenScalarFieldEnum = {
   expires: 'expires'
 };
 
+exports.Prisma.CategoryScalarFieldEnum = {
+  id: 'id',
+  name: 'name',
+  slug: 'slug',
+  description: 'description',
+  image: 'image',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
+  isActive: 'isActive'
+};
+
 exports.Prisma.ProductScalarFieldEnum = {
   id: 'id',
   name: 'name',
@@ -163,7 +174,8 @@ exports.Prisma.ProductScalarFieldEnum = {
   price: 'price',
   originalPrice: 'originalPrice',
   stock: 'stock',
-  category: 'category',
+  categoryId: 'categoryId',
+  categoryName: 'categoryName',
   images: 'images',
   rating: 'rating',
   reviewCount: 'reviewCount',
@@ -177,6 +189,24 @@ exports.Prisma.ProductScalarFieldEnum = {
   createdAt: 'createdAt',
   updatedAt: 'updatedAt',
   featured: 'featured'
+};
+
+exports.Prisma.CartScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt',
+  sessionId: 'sessionId'
+};
+
+exports.Prisma.CartItemScalarFieldEnum = {
+  id: 'id',
+  cartId: 'cartId',
+  productId: 'productId',
+  quantity: 'quantity',
+  price: 'price',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
 };
 
 exports.Prisma.SortOrder = {
@@ -198,7 +228,10 @@ exports.Prisma.ModelName = {
   Account: 'Account',
   Session: 'Session',
   VerificationToken: 'VerificationToken',
-  Product: 'Product'
+  Category: 'Category',
+  Product: 'Product',
+  Cart: 'Cart',
+  CartItem: 'CartItem'
 };
 
 /**

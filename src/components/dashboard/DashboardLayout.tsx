@@ -91,8 +91,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             duration: 0.4
           }}
         >
-          <div className="container mx-auto px-4 py-6">
+          <div className="container mx-auto px-4 py-6 max-w-screen-2xl h-full">
             {children}
+            <div className="h-6"></div>
           </div>
         </motion.main>
       </motion.div>
