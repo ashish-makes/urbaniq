@@ -6,6 +6,7 @@ import { Footer } from "@/components/footer";
 import { HeroCarousel } from "@/components/ui/hero-carousel";
 import { ProductCardWrapper } from "@/components/ProductCardWrapper";
 import { Quote, ArrowRight, Send } from "lucide-react";
+import { NewsletterForm } from "@/components/NewsletterForm";
 
 // Define the Product interface to match your API
 interface Product {
@@ -62,51 +63,44 @@ export default async function Home() {
   // Fetch products for the homepage
   const allProducts = await getProducts();
   
-  // Use all products and ensure 8 are shown, don't filter by featured/bestseller
-  // as this might be reducing the number displayed
-  const productsToShow = allProducts.slice(0, 8);
+  // Get featured or bestseller products first, then fill in with others
+  let featuredProducts = allProducts.filter(product => 
+    product.featured || product.isBestseller
+  );
   
-  // If we don't have enough products, create some placeholder products to fill in
-  const displayProducts = [...productsToShow];
-  
-  // Add placeholder products if we have fewer than 8 real products
-  if (displayProducts.length < 8) {
-    const placeholderCount = 8 - displayProducts.length;
-    for (let i = 0; i < placeholderCount; i++) {
-      displayProducts.push({
-        id: `placeholder-${i}`,
-        name: `Product ${i + 1}`,
-        price: 99.99,
-        description: "Coming soon...",
-        category: "placeholder",
-        slug: `placeholder-${i}`,
-        images: ["/placeholder.svg"],
-        rating: 5.0,
-        reviewCount: 0,
-        isBestseller: false,
-        featured: false
-      });
-    }
+  // If we don't have enough featured products, add some regular products
+  if (featuredProducts.length < 8) {
+    const regularProducts = allProducts.filter(product => 
+      !product.featured && !product.isBestseller
+    ).slice(0, 8 - featuredProducts.length);
+    
+    featuredProducts = [...featuredProducts, ...regularProducts];
   }
+  
+  // Use up to 8 products for display
+  const displayProducts = featuredProducts.slice(0, 8);
 
   const heroSlides = [
     {
       title: "Care Beyond the Collar",
       description: "Keep your pet safe, healthy, and engaged — even when you're away.",
       buttonText: "Shop Now",
-      image: "/hero-one.png"
+      image: "/hero-one.png",
+      buttonLink: "/products"
     },
     {
       title: "Smart Tech for Smart Pets",
       description: "Innovative solutions designed for modern pet parents.",
       buttonText: "Browse Collection",
-      image: "/hero-two.png"
+      image: "/hero-two.png",
+      buttonLink: "/products/category/camera"
     },
     {
       title: "Travel With Confidence",
       description: "Premium carriers and accessories for adventures together.",
       buttonText: "Discover More",
-      image: "/hero-three.png"
+      image: "/hero-three.png",
+      buttonLink: "/products/category/collar"
     },
   ];
 
@@ -131,7 +125,7 @@ export default async function Home() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
               {displayProducts.length > 0 ? (
                 displayProducts.map((product) => (
-              <ProductCardWrapper 
+                  <ProductCardWrapper 
                     key={product.id}
                     id={product.id}
                     name={product.name}
@@ -145,34 +139,29 @@ export default async function Home() {
                   />
                 ))
               ) : (
-                // Fallback to show some placeholder cards if no products are returned
-                Array(8).fill(0).map((_, i) => (
-                  <div key={i} className="bg-white rounded-lg p-4 shadow-sm animate-pulse">
-                    <div className="w-full h-48 bg-gray-200 rounded-lg mb-4"></div>
-                    <div className="h-6 bg-gray-200 rounded w-3/4 mb-2"></div>
-                    <div className="h-4 bg-gray-200 rounded w-1/2 mb-4"></div>
-                    <div className="h-4 bg-gray-200 rounded w-full mb-2"></div>
-                    <div className="h-4 bg-gray-200 rounded w-5/6"></div>
-                  </div>
-                ))
+                <div className="col-span-4 text-center py-10">
+                  <p className="text-gray-500">No products available at the moment. Please check back later!</p>
+                </div>
               )}
             </div>
             
-            <div className="text-center mt-12">
-              <Link href="/products">
-                <div className="group inline-flex items-center justify-center py-2.5 pl-6 pr-4 rounded-full bg-white text-black border border-gray-200 hover:bg-gray-50 transition-all font-medium text-sm">
-                  <span className="mr-2">View all products</span>
-                  <div className="bg-black rounded-full p-1.5 flex items-center justify-center">
-                    <div className="w-[14px] h-[14px] group-hover:-rotate-45 transition-transform duration-300 ease-in-out">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M5 12h14" />
-                        <path d="m12 5 7 7-7 7" />
-                      </svg>
+            {displayProducts.length > 0 && (
+              <div className="text-center mt-12">
+                <Link href="/products">
+                  <div className="group inline-flex items-center justify-center py-2.5 pl-6 pr-4 rounded-full bg-white text-black border border-gray-200 hover:bg-gray-50 transition-all font-medium text-sm">
+                    <span className="mr-2">View all products</span>
+                    <div className="bg-black rounded-full p-1.5 flex items-center justify-center">
+                      <div className="w-[14px] h-[14px] group-hover:-rotate-45 transition-transform duration-300 ease-in-out">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M5 12h14" />
+                          <path d="m12 5 7 7-7 7" />
+                        </svg>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </Link>
+                </Link>
               </div>
+            )}
           </div>
         </section>
 
@@ -409,15 +398,17 @@ export default async function Home() {
           </h2>
             <p className="text-sm md:text-base mb-8 max-w-2xl mx-auto">Save 10% OFF your first order + Free Shipping on orders shipping—code: Tail-5-4-treats</p>
             <div className="inline-block">
-              <Button className="bg-white text-black rounded-full pl-8 pr-14 py-4 text-base hover:bg-gray-100 relative group cursor-pointer">
-                Shop All Pets
-                <div className="absolute right-3 bg-black rounded-full w-8 h-8 flex items-center justify-center">
-                  <ArrowRight 
-                    size={16}
-                    className="text-white transform transition-transform duration-300 group-hover:-rotate-45"
-                  />
-                </div>
-              </Button>
+              <Link href="/products">
+                <Button className="bg-white text-black rounded-full pl-8 pr-14 py-4 text-base hover:bg-gray-100 relative group cursor-pointer">
+                  Shop All Pets
+                  <div className="absolute right-3 bg-black rounded-full w-8 h-8 flex items-center justify-center">
+                    <ArrowRight 
+                      size={16}
+                      className="text-white transform transition-transform duration-300 group-hover:-rotate-45"
+                    />
+                  </div>
+                </Button>
+              </Link>
             </div>
           </div>
         </section>
@@ -430,16 +421,7 @@ export default async function Home() {
           </h2>
           <p className="text-sm text-gray-500 mb-6">We never spam. Unpawlievable promise.</p>
             
-            <div className="relative max-w-sm mx-auto">
-              <input 
-                type="email" 
-                placeholder="Enter your email address" 
-                className="w-full py-2.5 pl-4 pr-10 bg-white border border-gray-200 rounded-full focus:outline-none focus:ring-2 focus:ring-black/20 transition-all"
-              />
-              <button className="absolute right-1 top-1/2 -translate-y-1/2 bg-black text-white p-1.5 rounded-full hover:bg-black/90 transition-all cursor-pointer">
-                <Send size={14} className="text-white" />
-              </button>
-            </div>
+            <NewsletterForm />
           </div>
         </section>
       </main>

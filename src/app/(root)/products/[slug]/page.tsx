@@ -7,6 +7,7 @@ import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
 import { Button } from '@/components/ui/button';
 import { ClientProductCard } from '@/components/ClientProductCard';
+import { useCart } from '@/context/CartContext';
 import { 
   Star, 
   ShoppingCart, 
@@ -476,6 +477,7 @@ export default function ProductDetailPage() {
   const { slug } = useParams();
   const productSlug: string = typeof slug === 'string' ? slug : Array.isArray(slug) ? slug[0] : '';
   const queryClient = useQueryClient();
+  const { addToCart } = useCart();
   
   const [quantity, setQuantity] = useState(1);
   const [selectedColor, setSelectedColor] = useState('');
@@ -691,6 +693,18 @@ export default function ProductDetailPage() {
   }, [product?.reviews]);
 
   const ratingCounts = getRatingCounts();
+
+  // Handle add to cart
+  const handleAddToCart = () => {
+    if (!product) return;
+    
+    addToCart({
+      id: product.id,
+      name: product.name,
+      price: product.price,
+      image: product.images[0]
+    }, quantity);
+  };
 
   // Lightweight loading skeleton
   if (isLoading) {
@@ -1035,7 +1049,10 @@ export default function ProductDetailPage() {
                     <span>Buy Now</span>
                   </Button>
                   
-                  <Button className="flex-1 bg-white border border-gray-200 text-black hover:bg-gray-50 rounded-full py-6 h-12 text-sm font-medium transition-all duration-300 flex items-center justify-center gap-2 cursor-pointer">
+                  <Button
+                    onClick={handleAddToCart}
+                    className="flex-1 bg-white border border-gray-200 text-black hover:bg-gray-50 rounded-full py-6 h-12 text-sm font-medium transition-all duration-300 flex items-center justify-center gap-2 cursor-pointer"
+                  >
                     <ShoppingCart size={15} strokeWidth={2} className="mr-1" />
                     <span>Add to Cart</span>
                   </Button>
@@ -1355,7 +1372,10 @@ export default function ProductDetailPage() {
               </div>
               
               <div className="flex gap-2">
-                <Button className="bg-white border border-gray-200 text-black hover:bg-gray-50 h-9 text-sm font-medium flex items-center justify-center gap-1.5 px-5 rounded-full cursor-pointer">
+                <Button 
+                  onClick={handleAddToCart}
+                  className="bg-white border border-gray-200 text-black hover:bg-gray-50 h-9 text-sm font-medium flex items-center justify-center gap-1.5 px-5 rounded-full cursor-pointer"
+                >
                   <ShoppingCart size={15} strokeWidth={2} />
                   <span className="hidden sm:inline">Add to Cart</span>
                 </Button>

@@ -18,6 +18,7 @@ interface HeroSlide {
   description: string;
   buttonText: string;
   image: string;
+  buttonLink?: string;
 }
 
 interface HeroCarouselProps {
@@ -177,7 +178,7 @@ export function HeroCarousel({ slides }: HeroCarouselProps) {
                         {slide.description}
                       </p>
                       <div>
-                        <Link href="/">
+                        <Link href={slide.buttonLink || "/products"}>
                           <div className="group inline-flex items-center justify-center py-1.5 pl-3 pr-2 rounded-full bg-white text-black hover:bg-white/90 transition-all font-bricolage text-sm">
                             <span className="mr-1.5">{slide.buttonText}</span>
                             <div className="bg-black rounded-full p-1 flex items-center justify-center">
