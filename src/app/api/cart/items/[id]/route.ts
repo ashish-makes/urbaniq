@@ -6,7 +6,7 @@ import prisma from '@/lib/prisma';
 // PATCH /api/cart/items/[id] - Update cart item quantity
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -17,6 +17,8 @@ export async function PATCH(
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
     
+    // Properly await params before accessing its properties
+    const params = await context.params;
     const id = params.id;
     const { quantity } = await req.json();
     
@@ -119,7 +121,7 @@ export async function PATCH(
 // DELETE /api/cart/items/[id] - Remove an item from the cart
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -130,6 +132,8 @@ export async function DELETE(
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
     
+    // Properly await params before accessing its properties
+    const params = await context.params;
     const id = params.id;
     
     let cartItem = null;

@@ -101,20 +101,30 @@ const fetchProducts = async (categorySlug?: string, featured?: boolean): Promise
       params.append('featured', 'true');
     }
     
+    // Add a limit parameter to fetch more products
+    params.append('limit', '20');
+    
     // Add params to URL if any exist
     if (params.toString()) {
       url += `?${params.toString()}`;
     }
+    
+    console.log("Fetching products from:", url);
       
     const response = await fetch(url, {
-      next: { revalidate: 3600 } // Cache for 1 hour
+      cache: 'no-store',
+      headers: {
+        'Content-Type': 'application/json',
+      }
     });
     
     if (!response.ok) {
       throw new Error('Failed to fetch products');
     }
     
-    return response.json();
+    const products = await response.json();
+    console.log(`Fetched ${products.length} products from ${url}`);
+    return products;
   } catch (error) {
     console.error('Error fetching products:', error);
     return [];
@@ -306,7 +316,7 @@ export default function ProductsPage() {
   
   // Fetch products with React Query
   const { data: allProducts = [], isLoading, isError } = useQuery<Product[]>({
-    queryKey: ['products'],
+    queryKey: ['products', 'all'],
     queryFn: () => fetchProducts(),
     staleTime: 1000 * 60 * 5, // Consider data fresh for 5 minutes
     refetchOnWindowFocus: false,
@@ -331,11 +341,10 @@ export default function ProductsPage() {
 
   // Fetch featured products specifically
   const { data: featuredProducts = [] } = useQuery<Product[]>({
-    queryKey: ['featuredProducts'],
+    queryKey: ['featuredProducts', 'featured'],
     queryFn: () => fetchProducts(undefined, true),
     staleTime: 1000 * 60 * 5,
     refetchOnWindowFocus: false,
-    enabled: !isLoading && allProducts.length > 0,
   });
 
   // Get the products to be filtered in the main listing
@@ -414,15 +423,14 @@ export default function ProductsPage() {
     });
   }
 
-  // For carousels, always use the unfiltered products to show full collections
-  // Use featured products for first carousel regardless of other filters
-  const firstCarouselProducts = featuredProducts.length > 0 ? featuredProducts : allProducts;
-
-  // Get bestseller products from all products, not filtered ones
-  const bestsellerProducts = allProducts.filter(product => product.isBestseller);
-
-  // Use bestseller products for second carousel, falling back to all products if none are bestsellers
-  const secondCarouselProducts = bestsellerProducts.length > 0 ? bestsellerProducts : allProducts;
+  // Prepare carousel products
+  // For the first carousel, use ONLY featured products
+  const firstCarouselProducts = featuredProducts.filter(p => p.featured === true);
+  console.log(`Featured products for first carousel: ${firstCarouselProducts.length}`);
+  
+  // Get ONLY bestseller products for second carousel
+  const secondCarouselProducts = allProducts.filter(p => p.isBestseller === true);
+  console.log(`Bestseller products for second carousel: ${secondCarouselProducts.length}`);
 
   // Reset all filters
   const resetFilters = () => {
@@ -557,8 +565,8 @@ export default function ProductsPage() {
                         </div>
                       </CarouselItem>
                     ))
-                  ) : (
-                    // Show featured products
+                  ) : firstCarouselProducts.length > 0 ? (
+                    // Show ONLY featured products
                     firstCarouselProducts.map((product) => (
                     <CarouselItem key={product.id} className="sm:basis-1/2 md:basis-1/3 lg:basis-1/4 h-full">
                       <div className="p-1 h-full">
@@ -571,11 +579,19 @@ export default function ProductsPage() {
                             reviewCount={product.reviewCount}
                             image={product.image || (product.images && product.images[0]) || '/placeholder.png'}
                             isBestseller={product.isBestseller}
+                            featured={product.featured}
                             slug={product.slug}
                           />
                       </div>
                     </CarouselItem>
                     ))
+                  ) : (
+                    // Fallback if no featured products found
+                    <CarouselItem className="col-span-4 text-center py-10">
+                      <div className="p-1 h-full">
+                        <p className="text-gray-500">No featured products available at the moment.</p>
+                      </div>
+                    </CarouselItem>
                   )}
                 </CarouselContent>
                 <CarouselPrevious className="left-0 bg-black border-black hover:bg-black/80 text-white hover:text-white transition-all duration-200" />
@@ -609,8 +625,8 @@ export default function ProductsPage() {
                         </div>
                       </CarouselItem>
                     ))
-                  ) : (
-                    // Show bestseller products
+                  ) : secondCarouselProducts.length > 0 ? (
+                    // Show ONLY bestseller products
                     secondCarouselProducts.map((product) => (
                     <CarouselItem key={product.id} className="sm:basis-1/2 md:basis-1/3 lg:basis-1/4 h-full">
                       <div className="p-1 h-full">
@@ -623,34 +639,26 @@ export default function ProductsPage() {
                             reviewCount={product.reviewCount}
                             image={product.image || (product.images && product.images[0]) || '/placeholder.png'}
                             isBestseller={product.isBestseller}
+                            featured={product.featured}
                             slug={product.slug}
                           />
                       </div>
                     </CarouselItem>
                     ))
+                  ) : (
+                    // Fallback if no bestseller products found
+                    <CarouselItem className="col-span-4 text-center py-10">
+                      <div className="p-1 h-full">
+                        <p className="text-gray-500">No bestseller products available at the moment.</p>
+                      </div>
+                    </CarouselItem>
                   )}
                 </CarouselContent>
                 <CarouselPrevious className="left-0 bg-black border-black hover:bg-black/80 text-white hover:text-white transition-all duration-200" />
                 <CarouselNext className="right-0 bg-black border-black hover:bg-black/80 text-white hover:text-white transition-all duration-200" />
               </Carousel>
             </div>
-            
-            {/* Category filter buttons */}
-            <div className="flex flex-wrap justify-center gap-3 mt-6">
-              <a href="/products?category=new" className="px-5 py-2 rounded-full border border-gray-300 font-medium text-sm hover:bg-black hover:text-white hover:border-black transition-all duration-200">
-                New arrivals
-              </a>
-              <a href="/products?category=deals" className="px-5 py-2 rounded-full border border-gray-300 font-medium text-sm hover:bg-black hover:text-white hover:border-black transition-all duration-200">
-                Deals
-              </a>
-              <a href="/products?category=recommended" className="px-5 py-2 rounded-full border border-gray-300 font-medium text-sm hover:bg-black hover:text-white hover:border-black transition-all duration-200">
-                Recommended
-              </a>
-              <a href="/products?category=essentials" className="px-5 py-2 rounded-full border border-gray-300 font-medium text-sm hover:bg-black hover:text-white hover:border-black transition-all duration-200">
-                Essentials
-              </a>
-                  </div>
-                </div>
+          </div>
         </section>
 
         {/* Search refinement and product listing section */}

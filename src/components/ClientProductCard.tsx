@@ -12,6 +12,7 @@ interface ClientProductCardProps {
   reviewCount: number;
   image: string;
   isBestseller?: boolean;
+  featured?: boolean;
   slug?: string;
 }
 

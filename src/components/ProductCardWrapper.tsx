@@ -11,6 +11,7 @@ interface WrapperProps {
   reviewCount: number;
   image: string;
   isBestseller?: boolean;
+  featured?: boolean;
   slug?: string;
 }
 

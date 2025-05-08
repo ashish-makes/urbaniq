@@ -408,45 +408,43 @@ const productsData: Product[] = [
 
 // Fetch a product by slug - optimized with cache headers
 const fetchProduct = async (productSlug: string): Promise<Product> => {
+  // First attempt to fetch by slug
+  try {
+    // Try slug endpoint first
+    const response = await fetch(`/api/products/${productSlug}`, {
+      next: { revalidate: 3600 } // Cache for 1 hour
+    });
+    
+    if (response.ok) {
+      return response.json();
+    }
+  } catch (error) {
+    console.log('Slug fetch failed, trying ID fetch as fallback');
+  }
+  
+  // If slug fetch fails, try to identify if the slug has an ID component
   // Extract ID from slug if it has a format of text-id
   const slugParts = productSlug.split('-');
   const potentialId = slugParts[slugParts.length - 1];
   
-  // Decide which endpoint to use based on if we think this is an ID
-  let endpoint = `/api/products/${productSlug}`;
+  // Only attempt ID lookup if we have what looks like a valid ID
   if (potentialId && /^[a-zA-Z0-9_-]+$/.test(potentialId)) {
     try {
-      // Try ID endpoint first with a short timeout
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 500);
-      
       const idResponse = await fetch(`/api/products/id/${potentialId}`, {
-        signal: controller.signal,
         next: { revalidate: 3600 } // Cache for 1 hour
       });
-      
-      clearTimeout(timeoutId);
       
       if (idResponse.ok) {
         const data = await idResponse.json();
         return data;
       }
     } catch (error) {
-      // Fall back to regular slug fetch
-      console.log('ID fetch failed, trying slug fetch');
+      console.error('Both slug and ID fetch attempts failed');
     }
   }
   
-  // Fallback to slug fetch
-  const response = await fetch(endpoint, {
-    next: { revalidate: 3600 } // Cache for 1 hour
-  });
-  
-  if (!response.ok) {
-    throw new Error('Failed to fetch product');
-  }
-  
-  return response.json();
+  // If all attempts fail, throw an error
+  throw new Error('Failed to fetch product');
 };
 
 // Fetch related products by category

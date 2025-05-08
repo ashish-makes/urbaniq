@@ -3,9 +3,11 @@ import prisma from "../../../../lib/prisma";
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { slug: string } }
+  context: { params: { slug: string } }
 ) {
   try {
+    // Properly await params before accessing its properties
+    const params = await context.params;
     const slug = params.slug;
 
     if (!slug) {

@@ -11,6 +11,7 @@ interface ProductCardProps {
   reviewCount: number;
   image: string;
   isBestseller?: boolean;
+  featured?: boolean;
   slug?: string;
   onAddToCart?: () => void; // Optional callback for adding to cart
 }
@@ -25,6 +26,7 @@ export function ProductCard({
   reviewCount, 
   image, 
   isBestseller = false,
+  featured = false,
   slug,
   onAddToCart
 }: ProductCardProps) {
@@ -43,11 +45,13 @@ export function ProductCard({
 
   return (
     <div className="bg-gray-50 rounded-2xl overflow-hidden group transition-all duration-500 relative flex flex-col h-full border border-gray-100 hover:bg-gray-100/50">
-      {/* Bestseller badge */}
-      {isBestseller && (
+      {/* Product badge - show appropriate badge based on product status */}
+      {(isBestseller || featured) && (
         <div className="absolute top-4 left-4 z-10">
-          <div className="text-xs font-medium bg-white py-1 px-3 rounded-full shadow-sm">
-            Top selling
+          <div className={`text-xs font-medium py-1 px-3 rounded-full shadow-sm ${
+            featured ? "bg-black text-white" : "bg-white"
+          }`}>
+            {featured ? "Featured" : isBestseller ? "Top selling" : ""}
           </div>
         </div>
       )}

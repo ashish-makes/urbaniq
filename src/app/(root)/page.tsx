@@ -1,3 +1,6 @@
+'use client';
+
+import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import Link from "next/link";
@@ -7,6 +10,9 @@ import { HeroCarousel } from "@/components/ui/hero-carousel";
 import { ProductCardWrapper } from "@/components/ProductCardWrapper";
 import { Quote, ArrowRight, Send } from "lucide-react";
 import { NewsletterForm } from "@/components/NewsletterForm";
+import { useQuery } from '@tanstack/react-query';
+import { Skeleton } from "@/components/ui/skeleton";
+import slugify from "slugify";
 
 // Define the Product interface to match your API
 interface Product {
@@ -24,61 +30,165 @@ interface Product {
   inStock?: boolean;
 }
 
-// Fetch products from the API
-async function getProducts(): Promise<Product[]> {
+// Ensure product has a valid slug using slugify
+const ensureProductSlug = (product: Product): string => {
+  // If product has a slug property, use it
+  if (product.slug && product.slug.trim().length > 0) {
+    return product.slug;
+  }
+  
+  // If no slug, generate one from name using slugify
+  if (product.name) {
+    return slugify(product.name, { lower: true, strict: true });
+  }
+  
+  // If no name, use ID as fallback
+  return product.id;
+};
+
+// Fetch products from the API - client side
+const fetchProducts = async (featured?: boolean): Promise<Product[]> => {
   try {
-    // For server components, we need absolute URLs with protocol
-    // Try to use environment variable, or construct an absolute URL
-    let url: string;
+    let url = '/api/products';
     
-    if (process.env.NEXT_PUBLIC_API_URL) {
-      // Use the configured API URL if available
-      url = `${process.env.NEXT_PUBLIC_API_URL}/api/products`;
+    // Add featured filter if specified
+    if (featured) {
+      url += '?featured=true';
     } else {
-      // Fallback to the same origin
-      const protocol = process.env.NODE_ENV === 'development' ? 'http' : 'https';
-      const host = process.env.VERCEL_URL || 'localhost:3000';
-      url = `${protocol}://${host}/api/products`;
+      // Explicitly request all products with a larger limit
+      url += '?limit=20';
     }
     
-    console.log('Fetching products from:', url);
+    console.log("Fetching products from:", url);
     
     const res = await fetch(url, {
-      next: { revalidate: 3600 } // Revalidate every hour
+      // Add cache: 'no-store' to ensure fresh data
+      cache: 'no-store',
+      // Add a larger size limit if your API supports it
+      headers: {
+        'Content-Type': 'application/json',
+      }
     });
     
     if (!res.ok) {
       throw new Error('Failed to fetch products');
     }
     
-    const data = await res.json();
-    return data;
+    const products = await res.json();
+    console.log(`Fetched ${products.length} products from ${url}`);
+    
+    // Ensure each product has a valid slug
+    return products.map((product: Product) => ({
+      ...product,
+      slug: ensureProductSlug(product)
+    }));
   } catch (error) {
     console.error('Error fetching products:', error);
     return []; // Return empty array on error
   }
-}
+};
 
-export default async function Home() {
-  // Fetch products for the homepage
-  const allProducts = await getProducts();
+export default function Home() {
+  // Add CSS for shimmer effect
+  useEffect(() => {
+    // Add shimmer effect CSS if it doesn't exist
+    if (!document.getElementById('shimmer-style')) {
+      const style = document.createElement('style');
+      style.id = 'shimmer-style';
+      style.innerHTML = `
+        @keyframes shimmer {
+          0% {
+            transform: translateX(-100%);
+          }
+          100% {
+            transform: translateX(100%);
+          }
+        }
+        .shimmer-effect {
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: linear-gradient(
+            90deg,
+            rgba(255, 255, 255, 0) 0%,
+            rgba(255, 255, 255, 0.5) 50%,
+            rgba(255, 255, 255, 0) 100%
+          );
+          animation: shimmer 2s infinite;
+          pointer-events: none;
+        }
+      `;
+      document.head.appendChild(style);
+    }
+  }, []);
   
-  // Get featured or bestseller products first, then fill in with others
-  let featuredProducts = allProducts.filter(product => 
-    product.featured || product.isBestseller
-  );
+  // Simplified product fetching to get more products
+  const { data: allProducts = [], isLoading: allProductsLoading, isError: allProductsError } = useQuery<Product[]>({
+    queryKey: ['homeProducts', 'all'],
+    queryFn: () => fetchProducts(),
+    staleTime: 1000 * 60 * 5, // Consider data fresh for 5 minutes
+    refetchOnWindowFocus: false,
+  });
   
-  // If we don't have enough featured products, add some regular products
-  if (featuredProducts.length < 8) {
-    const regularProducts = allProducts.filter(product => 
-      !product.featured && !product.isBestseller
-    ).slice(0, 8 - featuredProducts.length);
+  // Simplified display products logic
+  // We will aim to show up to 8 products, prioritizing featured ones first
+  const displayProducts = useMemo(() => {
+    console.log("Total products fetched:", allProducts.length);
     
-    featuredProducts = [...featuredProducts, ...regularProducts];
-  }
+    // If no products, return empty array
+    if (allProducts.length === 0) {
+      return [];
+    }
+    
+    // First get featured and bestsellers
+    const priorityProducts = allProducts.filter(p => p.featured || p.isBestseller);
+    console.log("Featured/bestseller products:", priorityProducts.length);
+    
+    // Then get the rest
+    const regularProducts = allProducts.filter(p => !p.featured && !p.isBestseller);
+    console.log("Regular products:", regularProducts.length);
+    
+    // Combine them, prioritizing featured/bestsellers
+    const combined = [...priorityProducts, ...regularProducts];
+    console.log("Total combined products:", combined.length);
+    
+    // Limit to 8 products
+    return combined.slice(0, 8);
+  }, [allProducts]);
   
-  // Use up to 8 products for display
-  const displayProducts = featuredProducts.slice(0, 8);
+  console.log("Final display products count:", displayProducts.length);
+
+  // Product skeleton for loading state
+  const ProductSkeleton = () => (
+    <div className="bg-white rounded-lg overflow-hidden border border-gray-100">
+      <div className="relative">
+        <Skeleton className="w-full aspect-square bg-gray-100" />
+        <div className="absolute top-2 left-2">
+          <Skeleton className="h-4 w-16 rounded-full bg-gray-100" />
+        </div>
+      </div>
+      <div className="p-4 space-y-2">
+        <Skeleton className="w-3/4 h-4 rounded bg-gray-100" />
+        <Skeleton className="w-1/2 h-3 rounded bg-gray-100" />
+        <div className="pt-1">
+          <Skeleton className="w-1/3 h-5 rounded bg-gray-100" />
+        </div>
+        <div className="flex items-center justify-between pt-1">
+          <div className="flex items-center">
+            <div className="flex">
+              {Array(5).fill(0).map((_, i) => (
+                <Skeleton key={i} className="w-2 h-2 rounded-full mr-0.5 bg-gray-100" />
+              ))}
+            </div>
+            <Skeleton className="w-6 h-2 ml-1 rounded bg-gray-100" />
+          </div>
+          <Skeleton className="w-6 h-6 rounded-full bg-gray-100" />
+        </div>
+      </div>
+    </div>
+  );
 
   const heroSlides = [
     {
@@ -123,7 +233,21 @@ export default async function Home() {
             </p>
             
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-              {displayProducts.length > 0 ? (
+              {allProductsLoading ? (
+                // Show 8 loading skeletons
+                Array.from({ length: 8 }).map((_, index) => (
+                  <div key={index} className="relative overflow-hidden">
+                    <ProductSkeleton />
+                    <div className="shimmer-effect"></div>
+                  </div>
+                ))
+              ) : allProductsError ? (
+                // Show error state
+                <div className="col-span-4 text-center py-10">
+                  <p className="text-gray-500">Failed to load products. Please try again later!</p>
+                </div>
+              ) : displayProducts.length > 0 ? (
+                // Show exactly 8 products or fewer if that's all we have
                 displayProducts.map((product) => (
                   <ProductCardWrapper 
                     key={product.id}
@@ -135,7 +259,8 @@ export default async function Home() {
                     reviewCount={product.reviewCount || 0}
                     image={product.images?.[0] || "/placeholder.svg"}
                     isBestseller={product.isBestseller}
-                    slug={product.slug}
+                    featured={product.featured}
+                    slug={ensureProductSlug(product)}
                   />
                 ))
               ) : (
