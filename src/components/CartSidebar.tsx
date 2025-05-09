@@ -2,10 +2,13 @@
 
 import React from "react";
 import Link from "next/link";
-import { ShoppingCart, Trash2, Plus, Minus, ArrowRight } from "lucide-react";
+import { ShoppingCart, Trash2, Plus, Minus, ArrowRight, Loader2 } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetClose } from "@/components/ui/sheet";
 import { useCart } from "@/context/CartContext";
+import { useCheckout } from "@/hooks/useCheckout";
 import Image from "next/image";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 
 export function CartSidebar() {
   const { 
@@ -18,6 +21,21 @@ export function CartSidebar() {
     openCart, 
     closeCart
   } = useCart();
+  
+  const { createCheckoutSession, isLoading, error } = useCheckout();
+  const { status } = useSession();
+  const router = useRouter();
+  
+  // Handle checkout click with authentication check
+  const handleCheckout = () => {
+    if (status === 'unauthenticated') {
+      router.push('/login?redirect=checkout');
+      closeCart();
+      return;
+    }
+    
+    createCheckoutSession();
+  };
 
   return (
     <Sheet open={isCartOpen} onOpenChange={(open) => open ? openCart() : closeCart()}>
@@ -96,19 +114,40 @@ export function CartSidebar() {
                   <span className="text-gray-500 text-sm">Shipping</span>
                   <span className="font-medium text-sm">Calculated at checkout</span>
                 </div>
-                <Link href="/checkout" className="group block w-full">
-                  <div className="group inline-flex items-center justify-center py-2.5 w-full pl-4 pr-3 rounded-full bg-black text-white hover:bg-black/90 transition-all font-bricolage text-sm">
-                    <span className="mr-1.5">Checkout</span>
-                    <div className="bg-white rounded-full p-1 flex items-center justify-center ml-auto">
-                      <div className="w-[12px] h-[12px] group-hover:-rotate-45 transition-transform duration-300 ease-in-out">
-                        <ArrowRight size={12} stroke="black" strokeWidth={2} />
-                      </div>
-                    </div>
+                
+                {error && (
+                  <div className="text-red-500 text-xs mb-3 text-center">
+                    {error}
                   </div>
-                </Link>
+                )}
+                
+                <button 
+                  onClick={handleCheckout}
+                  disabled={isLoading}
+                  className="group block w-full"
+                >
+                  <div className="group inline-flex items-center justify-center py-2.5 w-full pl-4 pr-3 rounded-full bg-black text-white hover:bg-black/90 transition-all font-medium text-sm disabled:opacity-70">
+                    {isLoading ? (
+                      <>
+                        <Loader2 size={16} className="animate-spin mr-2" />
+                        <span>Processing...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="mr-1.5">Checkout</span>
+                        <div className="bg-white rounded-full p-1 flex items-center justify-center ml-auto">
+                          <div className="w-[12px] h-[12px] group-hover:-rotate-45 transition-transform duration-300 ease-in-out">
+                            <ArrowRight size={12} stroke="black" strokeWidth={2} />
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </button>
+                
                 <SheetClose asChild>
                   <button className="group w-full mt-3">
-                    <div className="group inline-flex items-center justify-center py-2.5 w-full pl-4 pr-3 rounded-full bg-white text-black border border-gray-200 hover:bg-gray-50 transition-all font-bricolage text-sm">
+                    <div className="group inline-flex items-center justify-center py-2.5 w-full pl-4 pr-3 rounded-full bg-white text-black border border-gray-200 hover:bg-gray-50 transition-all font-medium text-sm">
                       <span className="mr-1.5">Continue Shopping</span>
                       <div className="bg-black rounded-full p-1 flex items-center justify-center ml-auto">
                         <div className="w-[12px] h-[12px] group-hover:-rotate-45 transition-transform duration-300 ease-in-out">
@@ -129,7 +168,7 @@ export function CartSidebar() {
               <p className="text-gray-500 text-sm text-center mb-6">Looks like you haven't added any products to your cart yet.</p>
               <SheetClose asChild>
                 <Link href="/products">
-                  <div className="group inline-flex items-center justify-center py-2 pl-4 pr-3 rounded-full bg-black text-white hover:bg-black/90 transition-all font-bricolage text-sm">
+                  <div className="group inline-flex items-center justify-center py-2 pl-4 pr-3 rounded-full bg-black text-white hover:bg-black/90 transition-all font-medium text-sm">
                     <span className="mr-1.5">Start Shopping</span>
                     <div className="bg-white rounded-full p-1 flex items-center justify-center">
                       <div className="w-[12px] h-[12px] group-hover:-rotate-45 transition-transform duration-300 ease-in-out">

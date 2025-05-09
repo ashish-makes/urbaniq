@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, Suspense } from 'react';
 import Image from 'next/image';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
 import { Button } from '@/components/ui/button';
@@ -41,6 +41,7 @@ import {
 } from "@/components/ui/accordion";
 import { motion, AnimatePresence } from "framer-motion";
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useCheckout } from '@/hooks/useCheckout';
 
 // Define types for product data
 interface ProductSpec {
@@ -476,6 +477,8 @@ export default function ProductDetailPage() {
   const productSlug: string = typeof slug === 'string' ? slug : Array.isArray(slug) ? slug[0] : '';
   const queryClient = useQueryClient();
   const { addToCart } = useCart();
+  const router = useRouter();
+  const { createCheckoutSession, isLoading: checkoutLoading } = useCheckout();
   
   const [quantity, setQuantity] = useState(1);
   const [selectedColor, setSelectedColor] = useState('');
@@ -702,6 +705,22 @@ export default function ProductDetailPage() {
       price: product.price,
       image: product.images[0]
     }, quantity);
+  };
+  
+  // Handle buy now - add to cart and proceed directly to Stripe checkout
+  const handleBuyNow = async () => {
+    if (!product) return;
+    
+    // Add the product to cart first
+    addToCart({
+      id: product.id,
+      name: product.name,
+      price: product.price,
+      image: product.images[0]
+    }, quantity);
+    
+    // Directly create checkout session which will redirect to Stripe
+    createCheckoutSession();
   };
 
   // Lightweight loading skeleton
@@ -1043,8 +1062,18 @@ export default function ProductDetailPage() {
                 
                   {/* Add to cart and buy now buttons */}
                 <div className="flex gap-3 mb-6">
-                  <Button className="flex-1 bg-black hover:bg-black/90 text-white rounded-full py-6 h-12 text-sm font-medium transition-all duration-300 flex items-center justify-center gap-2 cursor-pointer">
-                    <span>Buy Now</span>
+                  <Button 
+                    onClick={handleBuyNow}
+                    disabled={checkoutLoading}
+                    className="flex-1 bg-black hover:bg-black/90 text-white rounded-full py-6 h-12 text-sm font-medium transition-all duration-300 flex items-center justify-center gap-2 cursor-pointer">
+                    {checkoutLoading ? (
+                      <>
+                        <span className="animate-spin mr-2">⏳</span>
+                        <span>Processing...</span>
+                      </>
+                    ) : (
+                      <span>Buy Now</span>
+                    )}
                   </Button>
                   
                   <Button
@@ -1378,8 +1407,12 @@ export default function ProductDetailPage() {
                   <span className="hidden sm:inline">Add to Cart</span>
                 </Button>
                 
-                <Button className="bg-black hover:bg-black/90 text-white h-9 text-sm font-medium px-5 rounded-full cursor-pointer">
-                  Buy Now
+                <Button 
+                  onClick={handleBuyNow}
+                  disabled={checkoutLoading}
+                  className="bg-black hover:bg-black/90 text-white h-9 text-sm font-medium px-5 rounded-full cursor-pointer"
+                >
+                  {checkoutLoading ? "Processing..." : "Buy Now"}
                 </Button>
               </div>
             </div>

@@ -19,6 +19,7 @@ type CartContextType = {
   items: CartItem[];
   cartCount: number;
   cartTotal: number;
+  subtotal: number;
   addToCart: (product: {
     id: string;
     name: string;
@@ -241,12 +242,14 @@ export function CartProvider({ children }: { children: ReactNode }) {
   // Calculate cart total and count
   const cartTotal = items.reduce((total, item) => total + (item.price * item.quantity), 0);
   const cartCount = items.reduce((count, item) => count + item.quantity, 0);
+  const subtotal = cartTotal; // The subtotal is the same as cartTotal before tax and shipping
 
   return (
     <CartContext.Provider value={{
       items,
       cartCount,
       cartTotal,
+      subtotal,
       addToCart,
       removeFromCart,
       updateQuantity,

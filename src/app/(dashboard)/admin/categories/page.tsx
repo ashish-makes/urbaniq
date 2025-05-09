@@ -173,7 +173,7 @@ export default function CategoriesPage() {
         </Link>
       </div>
 
-      <div className="bg-white rounded-lg overflow-hidden border">
+      <div className="bg-white rounded-lg overflow-hidden">
       {isLoading ? (
           <CategoryTableSkeleton />
         ) : error ? (

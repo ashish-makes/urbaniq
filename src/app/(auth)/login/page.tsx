@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Eye, EyeOff, ArrowLeft } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,11 +26,14 @@ const loginSchema = z.object({
 // Get the type from the schema
 type LoginFormValues = z.infer<typeof loginSchema>;
 
-export default function LoginPage() {
+// Create a client component that safely uses useSearchParams
+function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectPath = searchParams.get('redirect');
 
   // Initialize the form with react-hook-form and zodResolver
   const form = useForm<LoginFormValues>({
@@ -61,13 +64,17 @@ export default function LoginPage() {
       const res = await fetch("/api/user");
       const userData = await res.json();
       
-      if (userData.role === "ADMIN") {
+      if (redirectPath === 'checkout') {
+        // If redirected from checkout, go to homepage
+        toast.success("Logged in successfully");
+        router.push("/");
+      } else if (userData.role === "ADMIN") {
         router.push("/admin/dashboard");
+        toast.success("Logged in successfully");
       } else {
         router.push("/user/dashboard");
+        toast.success("Logged in successfully");
       }
-      
-      toast.success("Logged in successfully");
     } catch (error) {
       console.error("Login error:", error);
       toast.error("Something went wrong. Please try again.");
@@ -81,7 +88,9 @@ export default function LoginPage() {
     try {
       setIsGoogleLoading(true);
       await signIn("google", { 
-        callbackUrl: "/user/dashboard",
+        callbackUrl: redirectPath === 'checkout' 
+          ? "/" 
+          : "/user/dashboard",
         redirect: true
       });
     } catch (error) {
@@ -249,5 +258,14 @@ export default function LoginPage() {
         Having trouble logging in? <Link href="/contact" className="font-medium text-gray-700 hover:text-black">Contact Support</Link>
       </p>
     </Card>
+  );
+}
+
+// Main page component with proper Suspense boundaries
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen">Loading...</div>}>
+      <LoginForm />
+    </Suspense>
   );
 } 

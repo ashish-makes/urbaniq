@@ -40,10 +40,11 @@ interface Stats {
 
 interface RecentOrder {
   id: string;
-  date: string;
-  customer: string;
+  orderNumber: string;
+  customerName: string;
+  createdAt: string;
   total: number;
-  status: 'pending' | 'processing' | 'completed' | 'cancelled';
+  status: 'PENDING' | 'PROCESSING' | 'SHIPPED' | 'DELIVERED' | 'CANCELLED' | 'REFUNDED';
 }
 
 interface Product {
@@ -82,8 +83,15 @@ interface NewUser {
 
 // Add this utility function for truncating text
 const truncateText = (text: string, limit: number) => {
+  if (!text) return '';
   if (text.length <= limit) return text;
   return text.substring(0, limit) + '...';
+};
+
+// Format date to YYYY-MM-DD
+const formatDate = (dateString: string) => {
+  const date = new Date(dateString);
+  return date.toISOString().split('T')[0];
 };
 
 export default function AdminDashboard() {
@@ -113,20 +121,12 @@ export default function AdminDashboard() {
           return data;
         };
 
-        // Fetch orders - For now we'll use placeholder data as there's no order API yet
+        // Fetch orders from the API
         const fetchOrders = async () => {
-          // In a real app, you would fetch from an API endpoint like:
-          // const res = await fetch('/api/admin/orders');
-          // return await res.json();
-          
-          // Placeholder data for orders
-          return [
-            { id: 'ORD-5872', date: '2023-09-15', customer: 'Alex Johnson', total: 249, status: 'completed' as const },
-            { id: 'ORD-5871', date: '2023-09-14', customer: 'Maria Garcia', total: 129, status: 'processing' as const },
-            { id: 'ORD-5870', date: '2023-09-13', customer: 'John Smith', total: 89, status: 'pending' as const },
-            { id: 'ORD-5869', date: '2023-09-12', customer: 'Emma Wilson', total: 159, status: 'completed' as const },
-            { id: 'ORD-5868', date: '2023-09-11', customer: 'David Lopez', total: 199, status: 'cancelled' as const },
-          ];
+          const res = await fetch('/api/orders?limit=5');
+          if (!res.ok) throw new Error('Failed to fetch orders');
+          const data = await res.json();
+          return data.orders;
         };
 
         // Fetch all data in parallel
@@ -154,17 +154,36 @@ export default function AdminDashboard() {
           slug: product.slug
         })).slice(0, 5);
 
+        // Process orders data
+        const processedOrders = ordersData.map((order: any) => ({
+          id: order.id,
+          orderNumber: order.orderNumber,
+          customerName: order.customerName || order.customerEmail,
+          createdAt: formatDate(order.createdAt),
+          total: order.total,
+          status: order.status
+        }));
+
+        // Calculate total revenue from orders
+        const totalRevenue = ordersData.reduce((acc: number, order: any) => {
+          // Only count delivered or shipped orders for revenue
+          if (['DELIVERED', 'SHIPPED'].includes(order.status)) {
+            return acc + order.total;
+          }
+          return acc;
+        }, 0);
+
         // Set stats based on the fetched data
         setStats({
           users: usersData.length,
           products: productsData.length,
-          revenue: productsData.reduce((acc: number, product: Product) => acc + product.price, 0),
+          revenue: totalRevenue,
           orders: ordersData.length
         });
 
         setNewUsers(processedUsers);
         setRecentProducts(processedProducts);
-        setRecentOrders(ordersData);
+        setRecentOrders(processedOrders);
         setIsLoading(false);
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
@@ -186,10 +205,12 @@ export default function AdminDashboard() {
   
   const getStatusColor = (status: string) => {
     switch(status) {
-      case 'completed': return 'bg-green-50 text-green-600';
-      case 'processing': return 'bg-blue-50 text-blue-600';
-      case 'pending': return 'bg-amber-50 text-amber-600';
-      case 'cancelled': return 'bg-red-50 text-red-600';
+      case 'DELIVERED': return 'bg-green-50 text-green-600';
+      case 'PROCESSING': return 'bg-blue-50 text-blue-600';
+      case 'PENDING': return 'bg-amber-50 text-amber-600';
+      case 'CANCELLED': return 'bg-red-50 text-red-600';
+      case 'SHIPPED': return 'bg-indigo-50 text-indigo-600';
+      case 'REFUNDED': return 'bg-orange-50 text-orange-600';
       default: return 'bg-gray-50 text-gray-600';
     }
   };
@@ -202,6 +223,11 @@ export default function AdminDashboard() {
       case 'USER': return 'bg-blue-50 text-blue-600';
       default: return 'bg-gray-50 text-gray-600';
     }
+  };
+
+  // Format status text for display
+  const formatStatus = (status: string) => {
+    return status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
   };
 
   // Add function to handle product deletion
@@ -427,17 +453,17 @@ export default function AdminDashboard() {
                 <tbody>
                   {recentOrders.map((order) => (
                     <tr key={order.id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
-                      <td className="p-3 font-medium">{order.id.substring(0, 8)}</td>
+                      <td className="p-3 font-medium">{order.orderNumber}</td>
                       <td className="p-3 max-w-[180px]">
-                        <div className="truncate" title={order.customer}>
-                          {truncateText(order.customer, 20)}
+                        <div className="truncate" title={order.customerName}>
+                          {truncateText(order.customerName, 20)}
                         </div>
                       </td>
-                      <td className="p-3 text-gray-500">{order.date}</td>
+                      <td className="p-3 text-gray-500">{order.createdAt}</td>
                       <td className="p-3 text-right font-medium">{formatCurrency(order.total)}</td>
                       <td className="p-3 text-center">
                         <span className={`text-xs px-2 py-1 rounded-full ${getStatusColor(order.status)}`}>
-                          {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                          {formatStatus(order.status)}
                         </span>
                       </td>
                       <td className="p-3 text-center">
@@ -452,7 +478,7 @@ export default function AdminDashboard() {
                               className="cursor-pointer"
                               asChild
                             >
-                              <Link href={`/admin/orders/view/${order.id}`}>
+                              <Link href={`/admin/orders/${order.id}`}>
                                 <Eye className="mr-2 h-4 w-4 text-blue-500" />
                                 <span>View Details</span>
                               </Link>
@@ -461,14 +487,19 @@ export default function AdminDashboard() {
                               className="cursor-pointer"
                               asChild
                             >
-                              <Link href={`/admin/orders/edit/${order.id}`}>
+                              <Link href={`/admin/orders/${order.id}#status`}>
                                 <Edit className="mr-2 h-4 w-4 text-green-500" />
                                 <span>Update Status</span>
                               </Link>
                             </DropdownMenuItem>
-                            <DropdownMenuItem className="cursor-pointer">
-                              <Download className="mr-2 h-4 w-4 text-purple-500" />
-                              <span>Invoice</span>
+                            <DropdownMenuItem 
+                              className="cursor-pointer"
+                              asChild
+                            >
+                              <Link href={`/admin/orders/${order.id}/invoice`}>
+                                <Download className="mr-2 h-4 w-4 text-purple-500" />
+                                <span>Invoice</span>
+                              </Link>
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
