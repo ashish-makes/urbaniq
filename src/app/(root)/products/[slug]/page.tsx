@@ -71,7 +71,9 @@ interface Product {
   reviewCount: number;
   images: string[];
   isBestseller?: boolean;
-  category: string;
+  category?: string | { id: string; name: string };
+  categoryId?: string;
+  categoryName?: string;
   features: string[];
   specs: ProductSpec;
   colors?: string[];
@@ -448,25 +450,55 @@ const fetchProduct = async (productSlug: string): Promise<Product> => {
   throw new Error('Failed to fetch product');
 };
 
-// Fetch related products by category
-const fetchRelatedProducts = async (category: string, currentSlug: string): Promise<Product[]> => {
+// Fetch related products by category (same categoryId or categoryName)
+const fetchRelatedProducts = async (productData: Product, currentSlug: string): Promise<Product[]> => {
+  // Safely extract category information
+  let categoryId: string | undefined = undefined;
+  let categoryName: string | undefined = undefined;
+  
+  if (productData.categoryId) {
+    categoryId = productData.categoryId;
+  } else if (productData.category && typeof productData.category === 'object') {
+    categoryId = productData.category.id;
+  }
+  
+  if (productData.categoryName) {
+    categoryName = productData.categoryName;
+  } else if (productData.category && typeof productData.category === 'object') {
+    categoryName = productData.category.name;
+  }
+  
+  if (!categoryId && !categoryName) {
+    return [];
+  }
+  
   try {
-    const response = await fetch(`/api/products?category=${category}`, {
+    // Try to fetch by categoryId first (more precise)
+    let apiUrl = '/api/products';
+    
+    if (categoryId) {
+      apiUrl += `?categoryId=${encodeURIComponent(categoryId)}`;
+    } else if (categoryName) {
+      apiUrl += `?category=${encodeURIComponent(categoryName)}`;
+    }
+    
+    const response = await fetch(apiUrl, {
       next: { revalidate: 3600 } // Cache for 1 hour
     });
     
     if (!response.ok) {
-      throw new Error('Failed to fetch related products');
+      throw new Error(`Failed to fetch products. Status: ${response.status}`);
     }
     
     const products = await response.json();
     
-    // Filter out current product and limit to 4
-    return products
-      .filter((p: Product) => p.slug !== currentSlug)
+    // Filter out current product and limit to 4 related products
+    const filtered = products
+      .filter((p: Product) => p.slug !== currentSlug && p.id !== productData.id)
       .slice(0, 4);
+    
+    return filtered;
   } catch (error) {
-    console.error('Error fetching related products:', error);
     return [];
   }
 };
@@ -520,23 +552,31 @@ export default function ProductDetailPage() {
         window.history.replaceState({}, '', `/products/${product.slug}`);
       }
       
-      // Prefetch related products when product data arrives
-      if (product.category) {
-        queryClient.prefetchQuery({
-          queryKey: ['relatedProducts', product.category, productSlug],
-          queryFn: () => fetchRelatedProducts(product.category, productSlug)
-        });
-        }
+      // Fetch related products when we have the product data
+      queryClient.prefetchQuery({
+        queryKey: ['relatedProducts', product.id],
+        queryFn: () => fetchRelatedProducts(product, product.slug)
+      });
+      
+      // Immediately fetch to ensure we have data
+      queryClient.fetchQuery({
+        queryKey: ['relatedProducts', product.id],
+        queryFn: () => fetchRelatedProducts(product, product.slug)
+      });
     }
   }, [product, productSlug, queryClient]);
   
-  // Fetch related products, only after product is loaded
+  // Fetch related products from the same category
   const { 
-    data: relatedProducts = []
+    data: relatedProducts = [],
+    isLoading: isRelatedLoading 
   } = useQuery<Product[]>({
-    queryKey: ['relatedProducts', product?.category, productSlug],
-    queryFn: () => fetchRelatedProducts(product?.category || '', productSlug),
-    enabled: !!product?.category,
+    queryKey: ['relatedProducts', product?.id],
+    queryFn: () => {
+      if (!product) return [];
+      return fetchRelatedProducts(product, product.slug);
+    },
+    enabled: !!product,
     staleTime: 1000 * 60 * 10, // Consider data fresh for 10 minutes
     refetchOnWindowFocus: false,
     refetchOnMount: false
@@ -602,9 +642,7 @@ export default function ProductDetailPage() {
   const decrementQuantity = () => quantity > 1 && setQuantity(prev => prev - 1);
 
   // Get display products for the carousel, with fallback
-  const displayProducts = relatedProducts.length > 0 
-    ? relatedProducts 
-    : productsData.filter(p => p.slug !== productSlug).slice(0, 4);
+  const hasRelatedProducts = relatedProducts && relatedProducts.length > 0;
 
   const handleShare = (platform: string) => {
     const url = window.location.href;
@@ -1341,40 +1379,42 @@ export default function ProductDetailPage() {
               </section>
 
               {/* Related Products Section */}
-        <section className="max-w-7xl mx-auto px-4 py-12">
-          <h2 className="text-xl font-bold mb-6">You might also like</h2>
-          
-          <Carousel
-            opts={{
-              align: "start",
-              slidesToScroll: 1,
-              containScroll: "trimSnaps"
-            }}
-            className="w-full"
-          >
-            <CarouselContent className="-ml-2 h-full">
-              {displayProducts.map((relProduct) => (
-                <CarouselItem key={relProduct.id} className="pl-2 basis-full sm:basis-1/2 md:basis-1/3 lg:basis-1/4 h-full">
-                  <div className="h-full">
-                    <ClientProductCard
-                            id={relProduct.id}
-                      name={relProduct.name}
-                      price={relProduct.price}
-                      description={relProduct.description}
-                      rating={relProduct.rating}
-                      reviewCount={relProduct.reviewCount}
-                      image={relProduct.images[0]}
-                      isBestseller={relProduct.isBestseller}
-                            slug={relProduct.slug}
-                    />
-                  </div>
-                </CarouselItem>
-              ))}
-            </CarouselContent>
-            <CarouselPrevious className="left-1 bg-white border border-gray-200 hover:bg-gray-50 text-black hover:text-black rounded-full" />
-            <CarouselNext className="right-1 bg-white border border-gray-200 hover:bg-gray-50 text-black hover:text-black rounded-full" />
-          </Carousel>
-        </section>
+              {hasRelatedProducts && (
+                <section className="max-w-7xl mx-auto px-4 py-12">
+                  <h2 className="text-xl font-bold mb-6">You might also like</h2>
+                  
+                  <Carousel
+                    opts={{
+                      align: "start",
+                      slidesToScroll: 1,
+                      containScroll: "trimSnaps"
+                    }}
+                    className="w-full"
+                  >
+                    <CarouselContent className="-ml-2 h-full">
+                      {relatedProducts.map((relProduct) => (
+                        <CarouselItem key={relProduct.id} className="pl-2 basis-full sm:basis-1/2 md:basis-1/3 lg:basis-1/4 h-full">
+                          <div className="h-full">
+                            <ClientProductCard
+                              id={relProduct.id}
+                              name={relProduct.name}
+                              price={relProduct.price}
+                              description={relProduct.description}
+                              rating={relProduct.rating}
+                              reviewCount={relProduct.reviewCount}
+                              image={relProduct.images[0]}
+                              isBestseller={relProduct.isBestseller}
+                              slug={relProduct.slug}
+                            />
+                          </div>
+                        </CarouselItem>
+                      ))}
+                    </CarouselContent>
+                    <CarouselPrevious className="left-1 bg-white border border-gray-200 hover:bg-gray-50 text-black hover:text-black rounded-full" />
+                    <CarouselNext className="right-1 bg-white border border-gray-200 hover:bg-gray-50 text-black hover:text-black rounded-full" />
+                  </Carousel>
+                </section>
+              )}
             </>
           </Suspense>
       </main>
