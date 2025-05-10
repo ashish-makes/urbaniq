@@ -7,6 +7,7 @@ import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
 import { Button } from '@/components/ui/button';
 import { ClientProductCard } from '@/components/ClientProductCard';
+import { ReviewForm } from '@/components/ReviewForm';
 import { useCart } from '@/context/CartContext';
 import { 
   Star, 
@@ -22,7 +23,8 @@ import {
   Facebook,
   Twitter,
   Instagram,
-  Mail
+  Mail,
+  X as CloseIcon
 } from 'lucide-react';
 import Link from 'next/link';
 import {
@@ -42,10 +44,18 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCheckout } from '@/hooks/useCheckout';
+import { useSession } from 'next-auth/react';
+import { toast } from 'sonner';
 
 // Define types for product data
 interface ProductSpec {
   [key: string]: string;
+}
+
+interface ReviewImage {
+  id: string;
+  url: string;
+  fileId: string;
 }
 
 interface Review {
@@ -57,6 +67,11 @@ interface Review {
   comment: string;
   helpful: number;
   verified: boolean;
+  images?: ReviewImage[];
+  userId?: string;
+  user?: {
+    image?: string;
+  };
 }
 
 interface Product {
@@ -511,18 +526,31 @@ export default function ProductDetailPage() {
   const { addToCart } = useCart();
   const router = useRouter();
   const { createCheckoutSession, isLoading: checkoutLoading } = useCheckout();
+  const { data: session } = useSession();
   
   const [quantity, setQuantity] = useState(1);
   const [selectedColor, setSelectedColor] = useState('');
   const [isWishlisted, setIsWishlisted] = useState(false);
+  const [wishlistLoading, setWishlistLoading] = useState(false);
   const [showShareMenu, setShowShareMenu] = useState(false);
   const [reviewFilter, setReviewFilter] = useState('all');
   const [showAllReviews, setShowAllReviews] = useState(false);
   const [showFixedButtons, setShowFixedButtons] = useState(false);
-  const [carouselApi, setCarouselApi] = useState<CarouselApi>();
+  const [productCarouselApi, setProductCarouselApi] = useState<CarouselApi | null>(null);
   const [currentSlide, setCurrentSlide] = useState(0);
   const [autoplayProgress, setAutoplayProgress] = useState(0);
+  const [showReviewForm, setShowReviewForm] = useState(false);
   const autoplayDuration = 5000;
+  const [reviewImagesModal, setReviewImagesModal] = useState<{
+    isOpen: boolean, 
+    images: ReviewImage[], 
+    initialIndex: number
+  }>({
+    isOpen: false,
+    images: [],
+    initialIndex: 0
+  });
+  const [modalCarouselApi, setModalCarouselApi] = useState<CarouselApi | null>(null);
 
   // Fetch product with React Query for caching and loading state
   const { 
@@ -542,6 +570,10 @@ export default function ProductDetailPage() {
   // Effect to handle product data when it changes
   useEffect(() => {
     if (product) {
+      // Log product data to debug reviews
+      console.log('Product data:', product);
+      console.log('Reviews data:', product.reviews);
+      
       // Set selected color when product data is available
       if (product.colors && product.colors.length > 0) {
         setSelectedColor(product.colors[0]);
@@ -598,21 +630,21 @@ export default function ProductDetailPage() {
 
   // Handle carousel slide change
   useEffect(() => {
-    if (!carouselApi) return;
+    if (!productCarouselApi) return;
 
     const onSelect = () => {
-      setCurrentSlide(carouselApi.selectedScrollSnap());
+      setCurrentSlide(productCarouselApi.selectedScrollSnap());
       setAutoplayProgress(0);
     };
 
-    carouselApi.on("select", onSelect);
+    productCarouselApi.on("select", onSelect);
     
     // Auto-advance carousel
     const autoplayInterval = setInterval(() => {
-      if (carouselApi.canScrollNext()) {
-        carouselApi.scrollNext();
+      if (productCarouselApi.canScrollNext()) {
+        productCarouselApi.scrollNext();
       } else {
-        carouselApi.scrollTo(0);
+        productCarouselApi.scrollTo(0);
       }
     }, autoplayDuration);
     
@@ -625,18 +657,34 @@ export default function ProductDetailPage() {
     }, 100);
     
     return () => {
-      carouselApi.off("select", onSelect);
+      productCarouselApi.off("select", onSelect);
       clearInterval(autoplayInterval);
       clearInterval(progressInterval);
     };
-  }, [carouselApi]);
+  }, [productCarouselApi]);
 
-  // Handle carousel navigation
+  // Add effect to handle modal opening and sliding to initial image
+  useEffect(() => {
+    if (reviewImagesModal.isOpen && modalCarouselApi) {
+      modalCarouselApi.scrollTo(reviewImagesModal.initialIndex);
+    }
+  }, [reviewImagesModal.isOpen, reviewImagesModal.initialIndex, modalCarouselApi]);
+
+  // Modify the scrollToSlide function
   const scrollToSlide = useCallback((index: number) => {
-    if (!carouselApi) return;
-    carouselApi.scrollTo(index);
+    if (!productCarouselApi) return;
+    productCarouselApi.scrollTo(index);
     setAutoplayProgress(0);
-  }, [carouselApi]);
+  }, [productCarouselApi]);
+
+  // Add function to open the image modal
+  const openImageCarousel = useCallback((images: ReviewImage[], initialIndex: number) => {
+    setReviewImagesModal({
+      isOpen: true,
+      images,
+      initialIndex
+    });
+  }, []);
 
   const incrementQuantity = () => setQuantity(prev => prev + 1);
   const decrementQuantity = () => quantity > 1 && setQuantity(prev => prev - 1);
@@ -666,7 +714,77 @@ export default function ProductDetailPage() {
     setShowShareMenu(false);
   };
 
-  const toggleWishlist = () => setIsWishlisted(!isWishlisted);
+  // Check if product is in wishlist
+  useEffect(() => {
+    const checkWishlistStatus = async () => {
+      if (product && session?.user) {
+        try {
+          const response = await fetch('/api/user/wishlist');
+          if (response.ok) {
+            const wishlistItems = await response.json();
+            // Check if current product is in wishlist
+            const isInWishlist = wishlistItems.some((item: any) => 
+              item.productId === product.id
+            );
+            setIsWishlisted(isInWishlist);
+          }
+        } catch (error) {
+          console.error('Error checking wishlist status:', error);
+        }
+      }
+    };
+
+    checkWishlistStatus();
+  }, [product, session?.user]);
+
+  const toggleWishlist = async () => {
+    if (!session?.user) {
+      // If user is not logged in, redirect to login page
+      router.push('/auth/signin?callbackUrl=' + encodeURIComponent(window.location.href));
+      return;
+    }
+
+    if (!product) return;
+    
+    setWishlistLoading(true);
+    
+    try {
+      if (isWishlisted) {
+        // Remove from wishlist
+        const response = await fetch(`/api/user/wishlist?productId=${product.id}`, {
+          method: 'DELETE',
+        });
+        
+        if (response.ok) {
+          setIsWishlisted(false);
+          toast.success('Removed from wishlist');
+        } else {
+          toast.error('Failed to remove from wishlist');
+        }
+      } else {
+        // Add to wishlist
+        const response = await fetch('/api/user/wishlist', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ productId: product.id }),
+        });
+        
+        if (response.ok) {
+          setIsWishlisted(true);
+          toast.success('Added to wishlist');
+        } else {
+          toast.error('Failed to add to wishlist');
+        }
+      }
+    } catch (error) {
+      console.error('Error updating wishlist:', error);
+      toast.error('Failed to update wishlist');
+    } finally {
+      setWishlistLoading(false);
+    }
+  };
 
   // Animation variants
   const containerVariants = {
@@ -705,7 +823,7 @@ export default function ProductDetailPage() {
 
   // Filter reviews based on selection
   const getFilteredReviews = useCallback(() => {
-    if (!product?.reviews) return [];
+    if (!product?.reviews || !Array.isArray(product.reviews)) return [];
     
     if (reviewFilter === 'all') return product.reviews;
     
@@ -722,9 +840,9 @@ export default function ProductDetailPage() {
   const getRatingCounts = useCallback(() => {
     const counts: Record<number, number> = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
     
-    if (product?.reviews) {
+    if (product?.reviews && Array.isArray(product.reviews)) {
       product.reviews.forEach(review => {
-        counts[review.rating]++;
+        counts[review.rating] = (counts[review.rating] || 0) + 1;
       });
     }
     
@@ -759,6 +877,20 @@ export default function ProductDetailPage() {
     
     // Directly create checkout session which will redirect to Stripe
     createCheckoutSession();
+  };
+
+  // Format date
+  const formatDate = (date: Date | string) => {
+    try {
+      return new Intl.DateTimeFormat('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+      }).format(new Date(date));
+    } catch (error) {
+      console.error('Date formatting error:', error);
+      return 'Invalid date';
+    }
   };
 
   // Lightweight loading skeleton
@@ -842,7 +974,7 @@ export default function ProductDetailPage() {
               <div className="relative">
                   {/* Carousel */}
                 <div className="relative overflow-hidden rounded-xl">
-                  <Carousel className="w-full" setApi={setCarouselApi} opts={{ loop: true }}>
+                  <Carousel className="w-full" setApi={setProductCarouselApi} opts={{ loop: true }}>
                   <CarouselContent>
                     {product.images.map((image: string, index: number) => (
                       <CarouselItem key={index}>
@@ -932,12 +1064,13 @@ export default function ProductDetailPage() {
                   <div className="flex items-center gap-2">
                     <button
                       onClick={toggleWishlist}
-                      className="h-8 w-8 rounded-full flex items-center justify-center hover:bg-gray-100"
+                      disabled={wishlistLoading}
+                      className={`h-8 w-8 rounded-full flex items-center justify-center hover:bg-gray-100 ${wishlistLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
                       aria-label={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
                     >
                       <Heart 
                         size={18} 
-                        className={`${isWishlisted ? 'fill-red-500 text-red-500' : 'text-gray-600'}`} 
+                        className={`${isWishlisted ? 'fill-red-500 text-red-500' : 'text-gray-600'} ${wishlistLoading ? 'animate-pulse' : ''}`} 
                       />
                     </button>
                     
@@ -1010,7 +1143,7 @@ export default function ProductDetailPage() {
                 
                 <div className="flex items-center gap-2 mb-3">
                   <div className="flex items-center">
-                    <span className="text-sm font-medium">{product.rating}</span>
+                    <span className="text-sm font-medium">{product.rating.toFixed(1)}</span>
                     <div className="flex items-center mx-1">
                       <Star size={14} className="fill-black text-black" />
                     </div>
@@ -1245,117 +1378,165 @@ export default function ProductDetailPage() {
                 </div>
               </section>
               
-              {/* Reviews section - Redesigned with cleaner UI */}
-              <section className="max-w-7xl mx-auto px-4 py-14">
+              {/* Reviews section - Flat, minimal redesign */}
+              <section id="reviews-section" className="max-w-7xl mx-auto px-4 py-12 border-t border-gray-100 pt-12 mt-6">
                 <div className="mb-8">
-                  <h2 className="text-xl font-bold mb-2">Customer Reviews</h2>
-                  
-                  {/* Overall rating and compact filters */}
-                  <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
-                    <div className="flex items-center gap-6">
-                      {/* Overall rating */}
-                      <div className="flex items-center gap-3">
-                        <div className="text-3xl font-medium">{product?.rating.toFixed(1)}</div>
-                        <div className="flex flex-col">
+                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
+                    <div>
+                      <h2 className="text-xl font-bold mb-1">Customer Reviews</h2>
+                      <div className="flex items-center gap-2">
                           <div className="flex">
                             {renderStars(Math.round(product?.rating || 0))}
                           </div>
-                          <div className="text-xs text-gray-500">
-                            {product?.reviewCount} reviews
-                          </div>
+                        <span className="text-sm text-gray-500">
+                          {product?.rating.toFixed(1)} · {product?.reviewCount} reviews
+                        </span>
                         </div>
                       </div>
                       
                       {/* Write review button */}
-                      <Button className="bg-black hover:bg-black/90 text-white rounded-full h-9 px-5 text-sm font-medium cursor-pointer">
-                        Write a Review
+                    <Button 
+                      className="bg-white border border-gray-200 hover:bg-gray-50 text-black rounded-full h-10 px-5 text-sm font-medium cursor-pointer self-start"
+                      onClick={() => {
+                        if (!session?.user) {
+                          toast.error('Please sign in to write a review');
+                          return;
+                        }
+                        setShowReviewForm(!showReviewForm);
+                      }}
+                    >
+                      {showReviewForm ? "Cancel" : "Write a Review"}
                       </Button>
                     </div>
                     
-                    {/* Compact filters */}
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      <span className="text-sm text-gray-500 mr-1">Filter:</span>
+                  {/* Review filters - horizontal pill buttons */}
+                  <div className="flex flex-wrap items-center gap-2 mb-6">
                       <button 
                         onClick={() => setReviewFilter('all')}
-                        className={`px-3 py-1 text-xs rounded-full ${
+                      className={`px-4 py-1.5 text-sm border rounded-full transition-colors ${
                           reviewFilter === 'all' 
-                            ? 'bg-black text-white' 
-                            : 'bg-gray-100 hover:bg-gray-200 text-gray-800'
+                          ? 'border-black bg-black text-white' 
+                          : 'border-gray-200 hover:border-gray-300 text-gray-700'
                         }`}
                       >
-                        All
+                      All Reviews
                       </button>
                       {[5, 4, 3, 2, 1].map(rating => (
                         <button 
                           key={rating}
                           onClick={() => setReviewFilter(rating.toString())}
-                          className={`px-3 py-1 text-xs rounded-full flex items-center gap-1 ${
+                        className={`px-4 py-1.5 text-sm border rounded-full transition-colors ${
                             reviewFilter === rating.toString() 
-                              ? 'bg-black text-white' 
-                              : 'bg-gray-100 hover:bg-gray-200 text-gray-800'
+                            ? 'border-black bg-black text-white' 
+                            : 'border-gray-200 hover:border-gray-300 text-gray-700'
                           }`}
                         >
-                          {rating}
-                          <Star size={10} className="fill-current" />
-                          <span className="opacity-75">({ratingCounts[rating]})</span>
+                        {rating} Stars ({ratingCounts[rating]})
                         </button>
                       ))}
                     </div>
                   </div>
-                </div>
                 
-                {/* Reviews list - Minimalist design */}
+                {/* Review form */}
+                {showReviewForm && (
+                  <div className="mb-8 border border-gray-100 rounded-xl overflow-hidden">
+                    <ReviewForm 
+                      productId={product.id}
+                      onSuccess={() => {
+                        setShowReviewForm(false);
+                        // Refetch the product data to get the updated reviews
+                        queryClient.invalidateQueries({ queryKey: ['product', productSlug] });
+                      }}
+                      onCancel={() => setShowReviewForm(false)}
+                    />
+                </div>
+                )}
+                
+                {/* Reviews list - Redesigned, flat and minimal */}
                 {displayReviews.length > 0 ? (
                   <>
-                    <div className="grid grid-cols-1 gap-3">
+                    <div className="space-y-6">
                       {displayReviews.map((review) => (
-                        <div key={review.id} className="rounded-lg p-5 bg-gray-50/50">
-                          <div className="flex items-start gap-4">
-                            {/* Review left side - user info */}
-                            <div className="hidden sm:block">
-                              <div className="w-11 h-11 bg-gray-100 rounded-full flex items-center justify-center overflow-hidden">
-                                <span className="text-lg font-medium text-gray-600">{review.username.charAt(0).toUpperCase()}</span>
+                        <div key={review.id} className="border-b border-gray-100 pb-6 last:border-0">
+                          <div className="flex items-start gap-3">
+                            {/* User avatar - with support for profile images */}
+                            <div className="w-10 h-10 rounded-full bg-gray-50 border border-gray-100 flex-shrink-0 overflow-hidden">
+                              {review.userId && review.user?.image ? (
+                                <Image 
+                                  src={review.user.image}
+                                  alt={review.username}
+                                  width={40}
+                                  height={40}
+                                  className="object-cover w-full h-full"
+                                />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center">
+                                  <span className="text-base font-medium text-gray-600">{review.username.charAt(0).toUpperCase()}</span>
                               </div>
+                              )}
                             </div>
                             
-                            {/* Review right side - content */}
+                            {/* Review content */}
                             <div className="flex-1">
-                              {/* Header with rating and date */}
-                              <div className="flex flex-wrap items-center gap-2 mb-3">
-                                <div>
-                                  <div className="flex items-center gap-2">
+                              <div className="flex flex-wrap items-center gap-2 mb-1">
                                     <span className="font-medium">{review.username}</span>
                                     {review.verified && (
-                                      <span className="text-xs bg-gray-100 text-gray-700 px-2 py-0.5 rounded-full flex items-center">
-                                        <Check size={10} className="mr-0.5" />
+                                  <span className="text-xs text-gray-500 flex items-center">
+                                    <Check size={12} className="mr-0.5" />
                                         Verified
                                       </span>
                                     )}
                                   </div>
-                                  <div className="flex items-center mt-1">
+                              
+                              <div className="flex items-center gap-2 mb-3">
                                     <div className="flex">
                                       {renderStars(review.rating)}
                                     </div>
-                                    <span className="text-xs text-gray-500 ml-2">{review.date}</span>
-                                  </div>
-                                </div>
+                                <span className="text-xs text-gray-400">{formatDate(review.date)}</span>
                               </div>
                               
                               {/* Review title and content */}
-                              <h4 className="font-medium mb-2">{review.title}</h4>
-                              <p className="text-gray-600 text-sm">{review.comment}</p>
+                              <h4 className="font-medium mb-1.5 text-base">{review.title}</h4>
+                              <p className="text-gray-600 text-sm mb-3">{review.comment}</p>
+                              
+                              {/* Review images - improved layout */}
+                              {review.images && Array.isArray(review.images) && review.images.length > 0 && (
+                                <div className="mt-4 mb-2">
+                                  <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-2">
+                                    {review.images.map((image) => (
+                                      <div 
+                                        key={image.id} 
+                                        className="relative aspect-square rounded-md overflow-hidden border border-gray-100 cursor-pointer hover:opacity-90 transition-opacity"
+                                        onClick={() => {
+                                          if (review.images && Array.isArray(review.images)) {
+                                            openImageCarousel(review.images as ReviewImage[], review.images.indexOf(image));
+                                          }
+                                        }}
+                                      >
+                                        <Image
+                                          src={image.url}
+                                          alt="Review"
+                                          fill
+                                          className="object-cover"
+                                          sizes="(max-width: 640px) 150px, 200px"
+                                        />
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
                             </div>
                           </div>
                         </div>
                       ))}
                     </div>
                   
-                    {/* Show more button */}
+                    {/* Show more button - improved styling */}
                     {!showAllReviews && getFilteredReviews().length > 4 && (
                       <div className="flex justify-center mt-8">
                         <Button 
                           onClick={() => setShowAllReviews(true)}
-                          className="bg-black hover:bg-black/90 text-white rounded-full h-9 px-6 text-sm font-medium cursor-pointer"
+                          className="bg-white border border-gray-200 hover:bg-gray-50 text-black rounded-full h-10 px-6 text-sm font-medium cursor-pointer"
                         >
                           Show all {getFilteredReviews().length} reviews
                         </Button>
@@ -1363,15 +1544,32 @@ export default function ProductDetailPage() {
                     )}
                   </>
                 ) : (
-                  <div className="rounded-lg py-12 px-6 text-center bg-gray-50/50">
-                    <div className="mx-auto w-12 h-12 border border-gray-200 rounded-full flex items-center justify-center mb-3">
+                  <div className="border border-gray-100 rounded-xl py-12 px-6 text-center">
+                    <div className="mx-auto w-12 h-12 border border-gray-100 rounded-full flex items-center justify-center mb-3">
                       <Star size={20} className="text-gray-300" />
                     </div>
                     <h3 className="text-lg font-medium mb-1">No reviews yet</h3>
                     <p className="text-gray-500 text-sm max-w-md mx-auto mb-4">
                       There are no reviews matching your filter. Try another filter or be the first to review this product.
                     </p>
-                    <Button className="bg-black hover:bg-black/90 text-white rounded-full h-9 px-5 text-sm font-medium cursor-pointer inline-flex">
+                    <Button 
+                      className="bg-white border border-gray-200 hover:bg-gray-50 text-black rounded-full h-10 px-5 text-sm font-medium cursor-pointer inline-flex"
+                      onClick={() => {
+                        if (!session?.user) {
+                          toast.error('Please sign in to write a review');
+                          return;
+                        }
+                        setShowReviewForm(true);
+                        // Scroll to the review form section
+                        const reviewsSection = document.getElementById('reviews-section');
+                        if (reviewsSection) {
+                          window.scrollTo({
+                            top: reviewsSection.offsetTop,
+                            behavior: 'smooth'
+                          });
+                        }
+                      }}
+                    >
                       Write a Review
                     </Button>
                   </div>
@@ -1456,6 +1654,67 @@ export default function ProductDetailPage() {
                 </Button>
               </div>
             </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      
+      {/* Custom Fullscreen Image Carousel Modal */}
+      <AnimatePresence>
+        {reviewImagesModal.isOpen && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-white/98 z-50 overflow-hidden"
+          >
+            {/* Close button */}
+            <button 
+              onClick={() => setReviewImagesModal(prev => ({...prev, isOpen: false}))}
+              className="absolute top-4 right-4 z-50 text-gray-800 hover:text-black focus:outline-none"
+              aria-label="Close image viewer"
+            >
+              <CloseIcon size={24} />
+            </button>
+            
+            {/* Main centered content container */}
+            <div className="absolute inset-0 flex items-center justify-center">
+              <Carousel 
+                setApi={setModalCarouselApi}
+                className="w-full max-w-6xl mx-auto"
+                opts={{ startIndex: reviewImagesModal.initialIndex }}
+              >
+                <CarouselContent>
+                  {reviewImagesModal.images.map((image, index) => (
+                    <CarouselItem key={image.id} className="flex items-center justify-center">
+                      <div className="w-full p-4 flex items-center justify-center">
+                        <div className="relative max-w-full max-h-[75vh]">
+                          <Image
+                            src={image.url}
+                            alt={`Review image ${index + 1}`}
+                            width={1200}
+                            height={1200}
+                            className="object-contain max-h-[75vh] max-w-full"
+                            priority={index === reviewImagesModal.initialIndex}
+                          />
+                        </div>
+                      </div>
+                    </CarouselItem>
+                  ))}
+                </CarouselContent>
+                
+                <CarouselPrevious className="absolute left-4 md:left-8 bg-white hover:bg-gray-100 border border-gray-200 text-gray-800 shadow-sm" />
+                <CarouselNext className="absolute right-4 md:right-8 bg-white hover:bg-gray-100 border border-gray-200 text-gray-800 shadow-sm" />
+              </Carousel>
+            </div>
+            
+            {/* Image counter fixed to bottom */}
+            {reviewImagesModal.images.length > 0 && (
+              <div className="absolute bottom-8 left-0 right-0 text-center">
+                <span className="bg-white px-4 py-2 rounded-full text-sm text-gray-800 border border-gray-200 shadow-sm">
+                  {modalCarouselApi?.selectedScrollSnap() !== undefined ? modalCarouselApi.selectedScrollSnap() + 1 : reviewImagesModal.initialIndex + 1} / {reviewImagesModal.images.length}
+                </span>
+              </div>
+            )}
           </motion.div>
         )}
       </AnimatePresence>

@@ -22,12 +22,22 @@ model User {
   image         String?
   password      String?
   role          Role      @default(USER)
+  // Profile fields
+  phone         String?
+  address       String?
+  city          String?
+  state         String?
+  postalCode    String?
+  country       String?
+  // Relations
   accounts      Account[]
   sessions      Session[]
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   carts         Cart[]
   orders        Order[]   // Relation to orders
+  wishlist      WishlistItem[] // Relation to wishlist items
+  reviews       Review[]
 }
 
 model Account {
@@ -105,6 +115,8 @@ model Product {
   featured      Boolean   @default(false)
   cartItems     CartItem[]
   orderItems    OrderItem[] // Relation to order items
+  wishlistItems WishlistItem[] // Relation to wishlist items
+  reviews       Review[]
 }
 
 model Cart {
@@ -182,6 +194,20 @@ model OrderItem {
   @@index([productId])
 }
 
+// Wishlist model to store user favorite products
+model WishlistItem {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String   @db.ObjectId
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId   String   @db.ObjectId
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  
+  @@unique([userId, productId]) // Ensure a product can only be added once to a user's wishlist
+  @@index([userId])
+  @@index([productId])
+}
+
 enum Role {
   USER
   ADMIN
@@ -194,4 +220,31 @@ enum OrderStatus {
   DELIVERED    // Order has been delivered
   CANCELLED    // Order was cancelled
   REFUNDED     // Order was refunded
+}
+
+model Review {
+  id          String        @id @default(auto()) @map("_id") @db.ObjectId
+  productId   String        @db.ObjectId
+  product     Product       @relation(fields: [productId], references: [id], onDelete: Cascade)
+  userId      String?       @db.ObjectId
+  user        User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  username    String
+  rating      Int
+  title       String
+  comment     String
+  date        DateTime      @default(now())
+  helpful     Int           @default(0)
+  verified    Boolean       @default(false)
+  images      ReviewImage[]
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+}
+
+model ReviewImage {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  reviewId  String   @db.ObjectId
+  review    Review   @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  url       String
+  fileId    String   @unique
+  createdAt DateTime @default(now())
 }

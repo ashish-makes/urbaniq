@@ -17,7 +17,8 @@ import {
   LogOut,
   BarChart3,
   Users,
-  Store
+  Store,
+  ShoppingCart
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -51,18 +52,18 @@ export function Sidebar({ isCollapsed, setIsCollapsed, isMobile = false }: Sideb
       icon: User,
     },
     {
-      title: 'Products',
-      href: '/user/products',
-      icon: ShoppingBag,
-    },
-    {
       title: 'Orders',
       href: '/user/orders',
       icon: ListOrdered,
     },
     {
-      title: 'Favorites',
-      href: '/user/favorites',
+      title: 'Cart',
+      href: '/user/cart',
+      icon: ShoppingCart,
+    },
+    {
+      title: 'Wishlist',
+      href: '/user/wishlist',
       icon: Heart,
     },
     {

@@ -121,19 +121,28 @@ export default function AdminDashboard() {
           return data;
         };
 
-        // Fetch orders from the API
-        const fetchOrders = async () => {
+        // Fetch orders from the API (limited for display)
+        const fetchRecentOrders = async () => {
           const res = await fetch('/api/orders?limit=5');
-          if (!res.ok) throw new Error('Failed to fetch orders');
+          if (!res.ok) throw new Error('Failed to fetch recent orders');
+          const data = await res.json();
+          return data.orders;
+        };
+
+        // Fetch all orders for calculating total revenue
+        const fetchAllOrders = async () => {
+          const res = await fetch('/api/orders');
+          if (!res.ok) throw new Error('Failed to fetch all orders');
           const data = await res.json();
           return data.orders;
         };
 
         // Fetch all data in parallel
-        const [usersData, productsData, ordersData] = await Promise.all([
+        const [usersData, productsData, recentOrdersData, allOrdersData] = await Promise.all([
           fetchUsers(),
           fetchProducts(),
-          fetchOrders()
+          fetchRecentOrders(),
+          fetchAllOrders()
         ]);
 
         // Process users data
@@ -154,8 +163,8 @@ export default function AdminDashboard() {
           slug: product.slug
         })).slice(0, 5);
 
-        // Process orders data
-        const processedOrders = ordersData.map((order: any) => ({
+        // Process recent orders data
+        const processedOrders = recentOrdersData.map((order: any) => ({
           id: order.id,
           orderNumber: order.orderNumber,
           customerName: order.customerName || order.customerEmail,
@@ -164,12 +173,17 @@ export default function AdminDashboard() {
           status: order.status
         }));
 
-        // Calculate total revenue from orders
-        const totalRevenue = ordersData.reduce((acc: number, order: any) => {
-          // Only count delivered or shipped orders for revenue
-          if (['DELIVERED', 'SHIPPED'].includes(order.status)) {
+        // Calculate total revenue from all orders
+        const totalRevenue = allOrdersData.reduce((acc: number, order: any) => {
+          // Count revenue from processing, shipped, and delivered orders
+          if (['PROCESSING', 'SHIPPED', 'DELIVERED'].includes(order.status)) {
             return acc + order.total;
           }
+          // Subtract revenue from cancelled and refunded orders
+          else if (['CANCELLED', 'REFUNDED'].includes(order.status)) {
+            return acc - order.total;
+          }
+          // For other statuses (like PENDING), don't add to total
           return acc;
         }, 0);
 
@@ -178,7 +192,7 @@ export default function AdminDashboard() {
           users: usersData.length,
           products: productsData.length,
           revenue: totalRevenue,
-          orders: ordersData.length
+          orders: allOrdersData.length
         });
 
         setNewUsers(processedUsers);
@@ -305,6 +319,19 @@ export default function AdminDashboard() {
       
       {/* Quick Actions */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+        {isLoading ? (
+          <>
+            {[1, 2, 3, 4, 5].map((i) => (
+              <div key={i} className="animate-pulse">
+                <div className="flex flex-col items-center justify-center h-24 bg-gray-100 rounded-lg">
+                  <div className="h-10 w-10 rounded-full bg-gray-200 mb-2" />
+                  <Skeleton className="h-4 w-16" />
+                </div>
+              </div>
+            ))}
+          </>
+        ) : (
+          <>
         <Link href="/admin/products/new">
           <div className="flex flex-col items-center justify-center h-24 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors group">
             <div className="h-10 w-10 rounded-full bg-white flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
@@ -349,12 +376,30 @@ export default function AdminDashboard() {
             <span className="text-sm font-medium text-gray-700">Settings</span>
           </div>
         </Link>
+          </>
+        )}
       </div>
       
       {/* Stats Overview */}
       <div className="mb-8">
         <h2 className="text-base font-medium mb-4">Overview</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {isLoading ? (
+            <>
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="bg-white rounded-lg p-4 animate-pulse">
+                  <div className="flex items-center">
+                    <Skeleton className="h-10 w-10 rounded-full mr-3" />
+                    <div>
+                      <Skeleton className="h-4 w-20 mb-1" />
+                      <Skeleton className="h-7 w-16" />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </>
+          ) : (
+            <>
           <div className="bg-white rounded-lg p-4">
             <div className="flex items-center">
               <div className="h-10 w-10 rounded-full bg-blue-50 flex items-center justify-center mr-3">
@@ -362,11 +407,7 @@ export default function AdminDashboard() {
               </div>
               <div>
                 <p className="text-sm text-gray-500">Total Users</p>
-                {isLoading ? (
-                  <Skeleton className="h-7 w-16 mt-1" />
-                ) : (
                   <p className="text-lg font-medium">{stats?.users.toLocaleString()}</p>
-                )}
               </div>
             </div>
           </div>
@@ -378,11 +419,7 @@ export default function AdminDashboard() {
               </div>
               <div>
                 <p className="text-sm text-gray-500">Products</p>
-                {isLoading ? (
-                  <Skeleton className="h-7 w-16 mt-1" />
-                ) : (
                   <p className="text-lg font-medium">{stats?.products.toLocaleString()}</p>
-                )}
               </div>
             </div>
           </div>
@@ -394,11 +431,7 @@ export default function AdminDashboard() {
               </div>
               <div>
                 <p className="text-sm text-gray-500">Revenue</p>
-                {isLoading ? (
-                  <Skeleton className="h-7 w-16 mt-1" />
-                ) : (
                   <p className="text-lg font-medium">{formatCurrency(stats?.revenue || 0)}</p>
-                )}
               </div>
             </div>
           </div>
@@ -410,14 +443,12 @@ export default function AdminDashboard() {
               </div>
               <div>
                 <p className="text-sm text-gray-500">Orders</p>
-                {isLoading ? (
-                  <Skeleton className="h-7 w-16 mt-1" />
-                ) : (
                   <p className="text-lg font-medium">{stats?.orders.toLocaleString()}</p>
-                )}
               </div>
             </div>
           </div>
+            </>
+          )}
         </div>
       </div>
       
@@ -431,11 +462,36 @@ export default function AdminDashboard() {
         </div>
         <div className="bg-white rounded-lg overflow-hidden">
           {isLoading ? (
-            <div className="p-4">
-              <Skeleton className="h-8 w-full mb-4" />
-              <Skeleton className="h-12 w-full mb-2" />
-              <Skeleton className="h-12 w-full mb-2" />
-              <Skeleton className="h-12 w-full" />
+            <div className="animate-pulse">
+              <div className="bg-gray-50 border-b border-gray-100 p-3">
+                <div className="grid grid-cols-6 gap-4">
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-1/2 mx-auto" />
+                </div>
+              </div>
+              
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="border-b border-gray-50 p-3">
+                  <div className="grid grid-cols-6 gap-4">
+                    <Skeleton className="h-5 w-4/5" />
+                    <div className="flex items-center">
+                      <Skeleton className="h-5 w-full" />
+                    </div>
+                    <Skeleton className="h-5 w-3/4" />
+                    <Skeleton className="h-5 w-1/2 ml-auto" />
+                    <div className="flex justify-center">
+                      <Skeleton className="h-6 w-20 rounded-full" />
+                    </div>
+                    <div className="flex justify-center">
+                      <Skeleton className="h-8 w-8 rounded-full" />
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           ) : recentOrders.length > 0 ? (
             <div className="overflow-x-auto">
@@ -528,11 +584,32 @@ export default function AdminDashboard() {
         </div>
         <div className="bg-white rounded-lg overflow-hidden">
           {isLoading ? (
-            <div className="p-4">
-              <Skeleton className="h-8 w-full mb-4" />
-              <Skeleton className="h-12 w-full mb-2" />
-              <Skeleton className="h-12 w-full mb-2" />
-              <Skeleton className="h-12 w-full" />
+            <div className="animate-pulse">
+              <div className="bg-gray-50 border-b border-gray-100 p-3">
+                <div className="grid grid-cols-5 gap-4">
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-1/2 mx-auto" />
+                </div>
+              </div>
+              
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="border-b border-gray-50 p-3">
+                  <div className="grid grid-cols-5 gap-4">
+                    <Skeleton className="h-5 w-1/2" />
+                    <div className="flex items-center">
+                      <Skeleton className="h-5 w-full" />
+                    </div>
+                    <Skeleton className="h-5 w-3/4" />
+                    <Skeleton className="h-5 w-1/2 ml-auto" />
+                    <div className="flex justify-center">
+                      <Skeleton className="h-8 w-8 rounded-full" />
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           ) : recentProducts.length > 0 ? (
             <div className="overflow-x-auto">
@@ -622,11 +699,34 @@ export default function AdminDashboard() {
         </div>
         <div className="bg-white rounded-lg overflow-hidden">
           {isLoading ? (
-            <div className="p-4">
-              <Skeleton className="h-8 w-full mb-4" />
-              <Skeleton className="h-12 w-full mb-2" />
-              <Skeleton className="h-12 w-full mb-2" />
-              <Skeleton className="h-12 w-full" />
+            <div className="animate-pulse">
+              <div className="bg-gray-50 border-b border-gray-100 p-3">
+                <div className="grid grid-cols-6 gap-4">
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-1/2 mx-auto" />
+                </div>
+              </div>
+              
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="border-b border-gray-50 p-3">
+                  <div className="grid grid-cols-6 gap-4">
+                    <Skeleton className="h-5 w-1/2" />
+                    <Skeleton className="h-5 w-3/4" />
+                    <Skeleton className="h-5 w-full" />
+                    <div className="flex justify-center">
+                      <Skeleton className="h-6 w-16 rounded-full" />
+                    </div>
+                    <Skeleton className="h-5 w-1/2 ml-auto" />
+                    <div className="flex justify-center">
+                      <Skeleton className="h-8 w-8 rounded-full" />
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           ) : newUsers.length > 0 ? (
             <div className="overflow-x-auto">

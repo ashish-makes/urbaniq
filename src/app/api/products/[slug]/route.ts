@@ -21,6 +21,21 @@ export async function GET(
       where: {
         slug: slug,
       },
+      include: {
+        reviews: {
+          orderBy: {
+            createdAt: 'desc',
+          },
+          include: {
+            user: {
+              select: {
+                image: true,
+              },
+            },
+            images: true,
+          },
+        }
+      }
     });
 
     if (!product) {

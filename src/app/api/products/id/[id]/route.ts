@@ -17,11 +17,21 @@ export async function GET(
       );
     }
     
-    // Fetch product by ID
+    // Fetch product by ID, including reviews and their images
     const product = await prisma.product.findUnique({
       where: {
         id: productId,
       },
+      include: {
+        reviews: {
+          include: {
+            images: true
+          },
+          orderBy: {
+            date: 'desc'
+          }
+        }
+      }
     });
     
     if (!product) {

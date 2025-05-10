@@ -15,6 +15,8 @@ import { CartSidebar } from "@/components/CartSidebar";
 import { MobileSidebar } from "@/components/MobileSidebar";
 import { useSession, signOut } from "next-auth/react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useRouter } from "next/navigation";
+import { Form } from "@/components/ui/form";
 
 // Custom link component without animation
 const AnimatedLink = ({ href, children }: { href: string; children: React.ReactNode }) => {
@@ -30,6 +32,7 @@ const AnimatedLink = ({ href, children }: { href: string; children: React.ReactN
 
 export function Header() {
   const { data: session, status } = useSession();
+  const router = useRouter();
   const isAdmin = session?.user?.role === "ADMIN";
   const isAuthenticated = status === "authenticated";
   
@@ -46,6 +49,7 @@ export function Header() {
   const [isTyping, setIsTyping] = useState(true);
   const [typingText, setTypingText] = useState("");
   const [scrolled, setScrolled] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   
   // Handle scroll events to add shadow
   useEffect(() => {
@@ -96,6 +100,13 @@ export function Header() {
 
   const handleSignOut = () => {
     signOut({ callbackUrl: '/' });
+  };
+
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+    }
   };
 
   return (
@@ -202,14 +213,18 @@ export function Header() {
           
           <div className="flex items-center space-x-3">
             <div className="relative">
+              <form onSubmit={handleSearchSubmit}>
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                 <Search size={16} className="text-gray-400" />
               </div>
               <Input 
                 type="search" 
                 placeholder={currentPlaceholder}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10 pr-4 py-1 h-8 w-[180px] lg:w-[220px] text-sm rounded-full border border-gray-200 focus:border-gray-300 focus-visible:ring-0 focus:ring-0 shadow-none"
               />
+              </form>
             </div>
             
             {/* Desktop Cart */}
@@ -306,14 +321,18 @@ export function Header() {
         {/* Mobile search and cart */}
         <div className="flex md:hidden items-center space-x-3 flex-1 ml-3">
           <div className="relative flex-1 mx-2">
+            <form onSubmit={handleSearchSubmit}>
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
               <Search size={16} className="text-gray-400" />
             </div>
             <Input 
               type="search" 
               placeholder={currentPlaceholder}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10 pr-3 py-1 h-8 w-full text-sm rounded-full border-gray-200 focus:border-gray-300 focus-visible:ring-0 focus:ring-0 shadow-none"
             />
+            </form>
           </div>
           {/* Mobile Cart */}
           <CartSidebar />

@@ -25,12 +25,14 @@ import {
   Star,
   PlusCircle,
   Download,
+  Loader2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import Link from 'next/link';
 
 interface Order {
   id: string;
+  orderNumber: string;
   date: string;
   product: string;
   total: number;
@@ -80,6 +82,7 @@ export default function UserDashboard() {
   const [isLoading, setIsLoading] = useState(true);
   const [recentOrders, setRecentOrders] = useState<Order[]>([]);
   const [wishlistItems, setWishlistItems] = useState<WishlistItem[]>([]);
+  const [isAddingToCart, setIsAddingToCart] = useState<Record<string, boolean>>({});
   const [stats, setStats] = useState({
     ordersCount: 0,
     totalSpent: 0,
@@ -91,32 +94,16 @@ export default function UserDashboard() {
     const fetchData = async () => {
       setIsLoading(true);
       try {
-        // Mock data for development
-        const mockOrders: Order[] = [
-          { id: 'ORD-1234', date: '12 May, 2023', product: 'Modern Desk Lamp', total: 89, status: 'delivered' as 'delivered' },
-          { id: 'ORD-1235', date: '20 May, 2023', product: 'Ergonomic Chair', total: 249, status: 'processing' as 'processing' },
-          { id: 'ORD-1236', date: '28 May, 2023', product: 'Wireless Charger', total: 35, status: 'delivered' as 'delivered' },
-        ];
-        
-        const mockWishlist: WishlistItem[] = [
-          { id: 'PRD-567', name: 'Minimal Floor Lamp', price: 129, image: '/placeholder.svg', category: 'Lighting', stock: 'In Stock', slug: 'minimal-floor-lamp' },
-          { id: 'PRD-568', name: 'Smart Home Hub', price: 199, image: '/placeholder.svg', category: 'Electronics', stock: 'In Stock', slug: 'smart-home-hub' },
-          { id: 'PRD-569', name: 'Premium Bluetooth Headphones', price: 159, image: '/placeholder.svg', category: 'Audio', stock: 'Low Stock', slug: 'premium-bluetooth-headphones' },
-        ];
-        
-        // For now, just use mock data since the API routes aren't implemented yet
-        // When you implement the API routes, you can uncomment this code
-        /*
         // Fetch orders from API
         const fetchOrders = async () => {
           try {
             const res = await fetch('/api/user/orders');
             if (!res.ok) throw new Error('Failed to fetch orders');
             const data = await res.json();
-            return data;
+            return data || [];
           } catch (error) {
             console.error('Error fetching orders:', error);
-            return mockOrders;
+            return [];
           }
         };
 
@@ -126,10 +113,10 @@ export default function UserDashboard() {
             const res = await fetch('/api/user/wishlist');
             if (!res.ok) throw new Error('Failed to fetch wishlist');
             const data = await res.json();
-            return data;
+            return data || [];
           } catch (error) {
             console.error('Error fetching wishlist:', error);
-            return mockWishlist;
+            return [];
           }
         };
 
@@ -139,10 +126,10 @@ export default function UserDashboard() {
             const res = await fetch('/api/user/cart');
             if (!res.ok) throw new Error('Failed to fetch cart');
             const data = await res.json();
-            return data.length || 0;
+            return data?.length || 0;
           } catch (error) {
             console.error('Error fetching cart:', error);
-            return 3; // Demo value
+            return 0;
           }
         };
 
@@ -152,32 +139,47 @@ export default function UserDashboard() {
           fetchWishlist(),
           fetchCartItems()
         ]);
-        */
         
-        // For now, use mock data directly
-        const orders = mockOrders;
-        const wishlist = mockWishlist;
-        const cartItemsCount = 3;
+        // Process orders data if needed
+        const processedOrders = Array.isArray(orders) ? orders.map((order: any) => ({
+          id: order.id || '',
+          orderNumber: order.orderNumber || '',
+          date: order.date || new Date(order.createdAt).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' }),
+          product: order.product || order.productName || order.items?.[0]?.name || 'Product',
+          total: order.total || 0,
+          status: (order.status || 'pending').toLowerCase() as 'pending' | 'processing' | 'completed' | 'delivered' | 'cancelled'
+        })).slice(0, 5) : []; // Only show 5 most recent orders
+
+        // Process wishlist data if needed
+        const processedWishlist = Array.isArray(wishlist) ? wishlist.map((item: any) => ({
+          id: item.id || '',
+          name: item.name || item.productName || '',
+          price: item.price || 0,
+          image: item.image || item.imageUrl || '/placeholder.svg',
+          category: item.category || 'Uncategorized',
+          stock: item.stock || 'In Stock',
+          slug: item.slug || ''
+        })).slice(0, 5) : []; // Only show 5 most recent wishlist items
 
         // Set the data
-        setRecentOrders(orders);
-        setWishlistItems(wishlist);
+        setRecentOrders(processedOrders);
+        setWishlistItems(processedWishlist);
         
         // Calculate stats
-        const totalSpent = orders.reduce((acc: number, order: Order) => acc + order.total, 0);
+        const totalSpent = processedOrders.reduce((acc: number, order: Order) => acc + order.total, 0);
         
         setStats({
-          ordersCount: orders.length,
+          ordersCount: Array.isArray(orders) ? orders.length : 0,
           totalSpent: totalSpent,
           cartItems: cartItemsCount,
-          savedItems: wishlist.length
+          savedItems: Array.isArray(wishlist) ? wishlist.length : 0
         });
 
         setIsLoading(false);
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
         toast.error('Failed to load dashboard data');
-      setIsLoading(false);
+        setIsLoading(false);
       }
     };
     
@@ -194,12 +196,12 @@ export default function UserDashboard() {
 
   const handleRemoveWishlistItem = async (id: string) => {
     try {
-      // In a real app, call API to remove item
-      // const response = await fetch(`/api/user/wishlist?id=${id}`, {
-      //   method: 'DELETE',
-      // });
+      // Call API to remove item
+      const response = await fetch(`/api/user/wishlist?id=${id}`, {
+        method: 'DELETE',
+      });
       
-      // if (!response.ok) throw new Error('Failed to remove item');
+      if (!response.ok) throw new Error('Failed to remove item');
       
       // Update local state
       setWishlistItems(wishlistItems.filter(item => item.id !== id));
@@ -214,6 +216,48 @@ export default function UserDashboard() {
       toast.error('Failed to remove item');
     }
   };
+
+  const handleAddToCart = async (id: string) => {
+    // Set loading state for this specific item
+    setIsAddingToCart(prev => ({ ...prev, [id]: true }));
+    
+    try {
+      // Find the item
+      const item = wishlistItems.find(item => item.id === id);
+      if (!item) throw new Error('Item not found');
+      
+      // Call API to add item to cart
+      const response = await fetch('/api/user/cart', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          productId: item.id,
+          quantity: 1 
+        }),
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to add item to cart');
+      }
+      
+      // Update cart count
+      setStats(prev => ({
+        ...prev,
+        cartItems: prev.cartItems + 1
+      }));
+      
+      toast.success('Item added to cart successfully');
+    } catch (error) {
+      console.error('Error adding item to cart:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to add item to cart');
+    } finally {
+      setIsAddingToCart(prev => ({ ...prev, [id]: false }));
+    }
+  };
   
   return (
     <div>
@@ -226,6 +270,19 @@ export default function UserDashboard() {
       
       {/* Quick Actions */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+        {isLoading ? (
+          <>
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="animate-pulse">
+                <div className="flex flex-col items-center justify-center h-24 bg-gray-100 rounded-lg">
+                  <div className="h-10 w-10 rounded-full bg-gray-200 mb-2" />
+                  <Skeleton className="h-4 w-16" />
+                </div>
+              </div>
+            ))}
+          </>
+        ) : (
+          <>
         <Link href="/user/orders" className="block">
           <div className="flex flex-col items-center justify-center h-24 bg-amber-50 rounded-lg hover:bg-amber-100 transition-colors group">
             <div className="h-10 w-10 rounded-full bg-white flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
@@ -261,12 +318,30 @@ export default function UserDashboard() {
             <span className="text-sm font-medium text-gray-700">Settings</span>
           </div>
         </Link>
+          </>
+        )}
       </div>
       
       {/* Stats Overview */}
       <div className="mb-6">
         <h2 className="text-base font-medium mb-4">Overview</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {isLoading ? (
+            <>
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="bg-white rounded-lg p-4 animate-pulse">
+                  <div className="flex items-center">
+                    <Skeleton className="h-10 w-10 rounded-full mr-3" />
+                    <div>
+                      <Skeleton className="h-4 w-20 mb-1" />
+                      <Skeleton className="h-7 w-16" />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </>
+          ) : (
+            <>
           <div className="bg-white rounded-lg p-4">
             <div className="flex items-center">
               <div className="h-10 w-10 rounded-full bg-amber-50 flex items-center justify-center mr-3">
@@ -274,11 +349,7 @@ export default function UserDashboard() {
               </div>
               <div>
                 <p className="text-sm text-gray-500">Total Orders</p>
-                {isLoading ? (
-                  <Skeleton className="h-7 w-16 mt-1" />
-                ) : (
                   <p className="text-lg font-medium">{stats.ordersCount}</p>
-                )}
               </div>
             </div>
           </div>
@@ -290,11 +361,7 @@ export default function UserDashboard() {
               </div>
               <div>
                 <p className="text-sm text-gray-500">Total Spent</p>
-                {isLoading ? (
-                  <Skeleton className="h-7 w-16 mt-1" />
-                ) : (
                   <p className="text-lg font-medium">{formatCurrency(stats.totalSpent)}</p>
-                )}
               </div>
             </div>
           </div>
@@ -306,11 +373,7 @@ export default function UserDashboard() {
               </div>
               <div>
                 <p className="text-sm text-gray-500">Cart Items</p>
-                {isLoading ? (
-                  <Skeleton className="h-7 w-16 mt-1" />
-                ) : (
                   <p className="text-lg font-medium">{stats.cartItems}</p>
-                )}
               </div>
             </div>
           </div>
@@ -322,14 +385,12 @@ export default function UserDashboard() {
               </div>
               <div>
                 <p className="text-sm text-gray-500">Saved Items</p>
-                {isLoading ? (
-                  <Skeleton className="h-7 w-16 mt-1" />
-                ) : (
                   <p className="text-lg font-medium">{stats.savedItems}</p>
-                )}
               </div>
             </div>
           </div>
+            </>
+          )}
         </div>
       </div>
       
@@ -343,11 +404,36 @@ export default function UserDashboard() {
         </div>
         <div className="bg-white rounded-lg overflow-hidden">
           {isLoading ? (
-            <div className="p-4">
-              <Skeleton className="h-8 w-full mb-4" />
-              <Skeleton className="h-12 w-full mb-2" />
-              <Skeleton className="h-12 w-full mb-2" />
-              <Skeleton className="h-12 w-full" />
+            <div className="animate-pulse">
+              <div className="bg-gray-50 border-b border-gray-100 p-3">
+                <div className="grid grid-cols-6 gap-4">
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-1/2 mx-auto" />
+                </div>
+              </div>
+              
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="border-b border-gray-50 p-3">
+                  <div className="grid grid-cols-6 gap-4">
+                    <Skeleton className="h-5 w-4/5" />
+                    <div className="flex items-center">
+                      <Skeleton className="h-5 w-full" />
+                    </div>
+                    <Skeleton className="h-5 w-3/4" />
+                    <Skeleton className="h-5 w-1/2 ml-auto" />
+                    <div className="flex justify-center">
+                      <Skeleton className="h-6 w-20 rounded-full" />
+                    </div>
+                    <div className="flex justify-center">
+                      <Skeleton className="h-8 w-8 rounded-full" />
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           ) : recentOrders.length > 0 ? (
             <div className="overflow-x-auto">
@@ -365,7 +451,7 @@ export default function UserDashboard() {
                 <tbody>
                   {recentOrders.map((order) => (
                     <tr key={order.id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
-                      <td className="p-3 font-medium">{order.id}</td>
+                      <td className="p-3 font-medium">{order.orderNumber}</td>
                       <td className="p-3 max-w-[180px]">
                         <div className="truncate" title={order.product}>
                           {truncateText(order.product, 25)}
@@ -438,11 +524,35 @@ export default function UserDashboard() {
         </div>
         <div className="bg-white rounded-lg overflow-hidden">
           {isLoading ? (
-            <div className="p-4">
-              <Skeleton className="h-8 w-full mb-4" />
-              <Skeleton className="h-12 w-full mb-2" />
-              <Skeleton className="h-12 w-full mb-2" />
-              <Skeleton className="h-12 w-full" />
+            <div className="animate-pulse">
+              <div className="bg-gray-50 border-b border-gray-100 p-3">
+                <div className="grid grid-cols-5 gap-4">
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-1/2 mx-auto" />
+                </div>
+              </div>
+              
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="border-b border-gray-50 p-3">
+                  <div className="grid grid-cols-5 gap-4">
+                    <div className="flex items-center">
+                      <Skeleton className="h-10 w-10 mr-3 rounded" />
+                      <Skeleton className="h-5 w-28" />
+                    </div>
+                    <Skeleton className="h-5 w-3/4 my-auto" />
+                    <Skeleton className="h-5 w-1/2 ml-auto my-auto" />
+                    <div className="flex justify-center my-auto">
+                      <Skeleton className="h-6 w-20 rounded-full" />
+                    </div>
+                    <div className="flex justify-center my-auto">
+                      <Skeleton className="h-8 w-8 rounded-full" />
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           ) : wishlistItems.length > 0 ? (
             <div className="overflow-x-auto">
@@ -493,10 +603,23 @@ export default function UserDashboard() {
                                 <span>View Product</span>
                               </Link>
                             </DropdownMenuItem>
-                            <DropdownMenuItem className="cursor-pointer">
-                              <PlusCircle className="mr-2 h-4 w-4 text-green-500" />
-                                <span>Add to Cart</span>
-                              </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              className="cursor-pointer"
+                              disabled={item.stock === 'Out of Stock' || isAddingToCart[item.id]}
+                              onClick={() => handleAddToCart(item.id)}
+                            >
+                              {isAddingToCart[item.id] ? (
+                                <>
+                                  <Loader2 className="mr-2 h-4 w-4 animate-spin text-green-500" />
+                                  <span>Adding...</span>
+                                </>
+                              ) : (
+                                <>
+                                  <PlusCircle className="mr-2 h-4 w-4 text-green-500" />
+                                  <span>{item.stock === 'Out of Stock' ? 'Out of Stock' : 'Add to Cart'}</span>
+                                </>
+                              )}
+                            </DropdownMenuItem>
                             <DropdownMenuItem 
                               className="cursor-pointer text-red-600 focus:text-red-600"
                               onClick={() => handleRemoveWishlistItem(item.id)}

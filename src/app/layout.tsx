@@ -4,6 +4,7 @@ import { Inter } from "next/font/google";
 import { ReactQueryProvider } from "@/providers/react-query-provider";
 import { AuthProvider } from "@/providers/auth-provider";
 import { CartProvider } from "@/context/CartContext";
+import { Toaster } from "sonner";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -24,6 +25,7 @@ export default function RootLayout({
           <ReactQueryProvider>
             <CartProvider>
               {children}
+              <Toaster position="bottom-right" />
             </CartProvider>
           </ReactQueryProvider>
         </AuthProvider>

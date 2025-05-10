@@ -121,6 +121,12 @@ exports.Prisma.UserScalarFieldEnum = {
   image: 'image',
   password: 'password',
   role: 'role',
+  phone: 'phone',
+  address: 'address',
+  city: 'city',
+  state: 'state',
+  postalCode: 'postalCode',
+  country: 'country',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 };
@@ -243,6 +249,36 @@ exports.Prisma.OrderItemScalarFieldEnum = {
   image: 'image'
 };
 
+exports.Prisma.WishlistItemScalarFieldEnum = {
+  id: 'id',
+  userId: 'userId',
+  productId: 'productId',
+  createdAt: 'createdAt'
+};
+
+exports.Prisma.ReviewScalarFieldEnum = {
+  id: 'id',
+  productId: 'productId',
+  userId: 'userId',
+  username: 'username',
+  rating: 'rating',
+  title: 'title',
+  comment: 'comment',
+  date: 'date',
+  helpful: 'helpful',
+  verified: 'verified',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.ReviewImageScalarFieldEnum = {
+  id: 'id',
+  reviewId: 'reviewId',
+  url: 'url',
+  fileId: 'fileId',
+  createdAt: 'createdAt'
+};
+
 exports.Prisma.SortOrder = {
   asc: 'asc',
   desc: 'desc'
@@ -276,7 +312,10 @@ exports.Prisma.ModelName = {
   Cart: 'Cart',
   CartItem: 'CartItem',
   Order: 'Order',
-  OrderItem: 'OrderItem'
+  OrderItem: 'OrderItem',
+  WishlistItem: 'WishlistItem',
+  Review: 'Review',
+  ReviewImage: 'ReviewImage'
 };
 
 /**
