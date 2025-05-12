@@ -46,156 +46,203 @@ export async function GET() {
 
 // POST endpoint to create a new review
 export async function POST(request: NextRequest) {
+  console.log('========== REVIEW SUBMISSION START ==========');
+  
   try {
+    // Get session
     const session = await getServerSession(authOptions);
+    console.log('Session:', session ? {
+      userId: session.user?.id,
+      email: session.user?.email,
+      name: session.user?.name
+    } : 'No session');
     
-    // Check if user is authenticated
     if (!session || !session.user) {
-      console.log('Unauthorized: No session or user');
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      console.error('Unauthorized: No session or user');
+      return NextResponse.json({ error: 'You must be logged in to submit a review' }, { status: 401 });
     }
-
+    
+    // Get request data
     const data = await request.json();
-    console.log('Review submission data:', data);
+    console.log('Review data received:', {
+      productId: data.productId,
+      rating: data.rating,
+      title: data.title?.substring(0, 20) + '...',
+      commentLength: data.comment?.length,
+      imagesCount: data.images?.length || 0
+    });
     
     const { productId, rating, title, comment, images } = data;
-
-    if (!productId || !rating || !title || !comment) {
-      console.log('Missing required fields:', { productId, rating, title, comment });
-      return NextResponse.json(
-        { error: 'Missing required fields' },
-        { status: 400 }
-      );
-    }
-
-    // Check if product exists
-    const product = await prisma.product.findUnique({
-      where: { id: productId },
-    });
-
-    if (!product) {
-      console.log('Product not found with ID:', productId);
-      return NextResponse.json(
-        { error: 'Product not found' },
-        { status: 404 }
-      );
-    }
-
-    // Check if the user has already reviewed this product
-    const existingReview = await prisma.review.findFirst({
-      where: {
-        productId,
-        userId: session.user.id,
-      },
-      include: {
-        images: true,
-      },
-    });
-
-    let review;
     
-    if (existingReview) {
-      console.log('Updating existing review:', existingReview.id);
-      
-      // Delete old images if new ones are provided
-      if (images && existingReview.images.length > 0) {
-        try {
-          // Delete existing images from ImageKit
-          for (const image of existingReview.images) {
-            await imagekit.deleteFile(image.fileId);
-          }
-          
-          // Delete existing image records
-          await prisma.reviewImage.deleteMany({
-            where: {
-              reviewId: existingReview.id
-            }
-          });
-        } catch (error) {
-          console.error('Failed to delete old review images:', error);
-          // Continue with update even if image deletion fails
-        }
-      }
-      
-      // Update the existing review
-      review = await prisma.review.update({
-        where: { id: existingReview.id },
-        data: {
-          rating,
-          title,
-          comment,
-          updatedAt: new Date(),
-          images: {
-            create: images ? images.map((image: any) => ({
-              url: image.url,
-              fileId: image.fileId,
-            })) : [],
-          },
-        },
-        include: {
-          images: true,
-        },
+    // Validate data
+    if (!productId) {
+      console.error('Missing productId');
+      return NextResponse.json({ error: 'Product ID is required' }, { status: 400 });
+    }
+    
+    if (!rating || rating < 1 || rating > 5) {
+      console.error('Invalid rating:', rating);
+      return NextResponse.json({ error: 'Valid rating (1-5) is required' }, { status: 400 });
+    }
+    
+    if (!title || !title.trim()) {
+      console.error('Missing title');
+      return NextResponse.json({ error: 'Review title is required' }, { status: 400 });
+    }
+    
+    if (!comment || !comment.trim()) {
+      console.error('Missing comment');
+      return NextResponse.json({ error: 'Review comment is required' }, { status: 400 });
+    }
+    
+    // Check if product exists
+    console.log('Finding product with ID:', productId);
+    let product;
+    try {
+      product = await prisma.product.findUnique({
+        where: { id: productId },
       });
-      
-      console.log('Review updated successfully:', review.id);
-    } else {
-      console.log('Creating new review with:', {
-        productId,
-        userId: session.user.id,
-        username: session.user.name || 'Anonymous',
-        rating,
-        title,
-        comment,
-        imagesCount: images ? images.length : 0
-      });
-
-      // Create a new review
-      review = await prisma.review.create({
-        data: {
+    } catch (dbError: any) {
+      console.error('Database error when finding product:', dbError.message);
+      return NextResponse.json({ error: 'Database error. Please try again.' }, { status: 500 });
+    }
+    
+    if (!product) {
+      console.error('Product not found with ID:', productId);
+      return NextResponse.json({ error: 'Product not found' }, { status: 404 });
+    }
+    console.log('Product found:', product.name);
+    
+    // Check for existing review
+    console.log('Checking for existing review by user:', session.user.id);
+    let existingReview;
+    try {
+      existingReview = await prisma.review.findFirst({
+        where: {
           productId,
           userId: session.user.id,
-          username: session.user.name || 'Anonymous',
-          rating,
-          title,
-          comment,
-          verified: true, // User is logged in so we consider this verified
-          images: {
-            create: images ? images.map((image: any) => ({
-              url: image.url,
-              fileId: image.fileId,
-            })) : [],
-          },
         },
-        include: {
-          images: true,
+        include: { images: true },
+      });
+    } catch (dbError: any) {
+      console.error('Database error when finding existing review:', dbError.message);
+      return NextResponse.json({ error: 'Database error. Please try again.' }, { status: 500 });
+    }
+    
+    // Create or update review
+    let review;
+    try {
+      if (existingReview) {
+        console.log('Updating existing review:', existingReview.id);
+        
+        // Delete existing images if there are new ones
+        if (images && existingReview.images.length > 0) {
+          try {
+            console.log('Deleting existing review images');
+            // Delete from ImageKit
+            for (const image of existingReview.images) {
+              await imagekit.deleteFile(image.fileId);
+            }
+            
+            // Delete from database
+            await prisma.reviewImage.deleteMany({
+              where: { reviewId: existingReview.id }
+            });
+          } catch (imageError) {
+            console.error('Error deleting existing images:', imageError);
+            // Continue with update even if image deletion fails
+          }
+        }
+        
+        // Update review
+        review = await prisma.review.update({
+          where: { id: existingReview.id },
+          data: {
+            rating,
+            title,
+            comment,
+            updatedAt: new Date(),
+            images: {
+              create: images ? images.map((image: any) => ({
+                url: image.url,
+                fileId: image.fileId,
+              })) : [],
+            },
+          },
+          include: { images: true },
+        });
+        console.log('Review updated successfully, ID:', review.id);
+      } else {
+        console.log('Creating new review');
+        
+        // Create review
+        review = await prisma.review.create({
+          data: {
+            productId,
+            userId: session.user.id,
+            username: session.user.name || 'Anonymous',
+            rating,
+            title,
+            comment,
+            verified: true,
+            images: {
+              create: images ? images.map((image: any) => ({
+                url: image.url,
+                fileId: image.fileId,
+              })) : [],
+            },
+          },
+          include: { images: true },
+        });
+        console.log('Review created successfully, ID:', review.id);
+      }
+    } catch (dbError: any) {
+      console.error('Database error creating/updating review:', dbError.message);
+      return NextResponse.json({ 
+        error: 'Failed to save review. Database error: ' + dbError.message 
+      }, { status: 500 });
+    }
+    
+    // Update product rating and review count
+    try {
+      console.log('Updating product rating');
+      const allReviews = await prisma.review.findMany({
+        where: { productId },
+        select: { rating: true },
+      });
+      
+      const totalRating = allReviews.reduce((sum, review) => sum + review.rating, 0);
+      const newRating = allReviews.length > 0 ? totalRating / allReviews.length : 0;
+      
+      await prisma.product.update({
+        where: { id: productId },
+        data: {
+          rating: newRating,
+          reviewCount: allReviews.length,
         },
       });
-
-      console.log('Review created successfully:', review.id);
+      console.log('Product rating updated:', { 
+        newRating, 
+        reviewCount: allReviews.length 
+      });
+    } catch (ratingError: any) {
+      console.error('Error updating product rating:', ratingError.message);
+      // Continue even if rating update fails
     }
-
-    // Update product rating and review count
-    const allReviews = await prisma.review.findMany({
-      where: { productId },
-      select: { rating: true },
+    
+    console.log('========== REVIEW SUBMISSION COMPLETE ==========');
+    return NextResponse.json({ 
+      success: true,
+      review: {
+        id: review.id,
+        rating: review.rating,
+        title: review.title
+      }
     });
-
-    const totalRating = allReviews.reduce((sum: number, review: { rating: number }) => sum + review.rating, 0);
-    const newRating = totalRating / allReviews.length;
-
-    await prisma.product.update({
-      where: { id: productId },
-      data: {
-        rating: newRating,
-        reviewCount: allReviews.length,
-      },
-    });
-
-    return NextResponse.json(review);
   } catch (error: any) {
-    console.error('Error creating review:', error);
+    console.error('Unhandled error in review submission:', error);
     return NextResponse.json(
-      { error: error.message || 'Failed to create review' },
+      { error: error.message || 'An unexpected error occurred' },
       { status: 500 }
     );
   }

@@ -24,17 +24,12 @@ export default function AuthLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body 
-        className={`${geistSans.variable} ${geistMono.variable} ${bricolage.variable} font-sans bg-gray-50 min-h-screen flex flex-col`}
-        suppressHydrationWarning
-      >
+<>
         <SmoothScroll>
           <main className="flex-1 flex items-center justify-center p-4">
             {children}
           </main>
         </SmoothScroll>
-      </body>
-    </html>
+</>
   );
 }

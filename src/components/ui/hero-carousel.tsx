@@ -35,6 +35,8 @@ export function HeroCarousel({ slides }: HeroCarouselProps) {
   const plugin = React.useRef(
     Autoplay({
       delay: 5000,
+      stopOnInteraction: false,
+      stopOnMouseEnter: true,
     })
   );
 
@@ -86,14 +88,6 @@ export function HeroCarousel({ slides }: HeroCarouselProps) {
       }
     };
   }, [current]);
-
-  const scrollPrev = React.useCallback(() => {
-    api?.scrollPrev();
-  }, [api]);
-
-  const scrollNext = React.useCallback(() => {
-    api?.scrollNext();
-  }, [api]);
   
   // Stats data
   const stats = [
@@ -156,14 +150,30 @@ export function HeroCarousel({ slides }: HeroCarouselProps) {
                   {/* Background Image without zoom effect */}
                   <div className="absolute inset-0 overflow-hidden">
                     <div className="relative w-full h-full">
-                      <Image
-                        src={slide.image}
-                        alt={slide.title}
-                        fill
-                        className="object-cover"
-                        priority={index === 0}
-                        sizes="100vw"
-                      />
+                      {/* For the first slide (index 0), render with simpler props for faster LCP */}
+                      {index === 0 ? (
+                        <Image
+                          src={slide.image}
+                          alt={slide.title}
+                          fill
+                          className="object-cover"
+                          priority={true}
+                          sizes="100vw"
+                          quality={90}
+                          loading="eager"
+                          fetchPriority="high"
+                        />
+                      ) : (
+                        <Image
+                          src={slide.image}
+                          alt={slide.title}
+                          fill
+                          className="object-cover"
+                          sizes="100vw"
+                          quality={75}
+                          loading="lazy"
+                        />
+                      )}
                       <div className="absolute inset-0 bg-black/30"></div>
                     </div>
                   </div>
@@ -195,9 +205,6 @@ export function HeroCarousel({ slides }: HeroCarouselProps) {
               </CarouselItem>
             ))}
           </CarouselContent>
-          
-          {/* Navigation buttons positioned at the middle of left and right edges */}
-          {/* Removed navigation buttons as requested */}
           
           {/* Pagination Dots */}
           <div className="absolute bottom-8 left-0 right-0 flex justify-center gap-2 z-20">

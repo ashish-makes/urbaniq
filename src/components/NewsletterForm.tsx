@@ -54,6 +54,7 @@ export function NewsletterForm() {
         <button 
           type="submit"
           disabled={status === 'loading'}
+          aria-label="Subscribe to newsletter"
           className="absolute right-1 top-1/2 -translate-y-1/2 bg-black text-white p-1.5 rounded-full hover:bg-black/90 transition-all cursor-pointer disabled:opacity-70 disabled:cursor-not-allowed"
         >
           {status === 'loading' ? (

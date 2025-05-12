@@ -19,13 +19,13 @@ export function Footer() {
               Elevating pet care with smart technology and innovative solutions for modern pet parents.
             </p>
             <div className="flex space-x-4">
-              <Link href="/" className="text-gray-500 hover:text-gray-800 transition-colors">
+              <Link href="/" aria-label="Visit our Facebook page" className="text-gray-500 hover:text-gray-800 transition-colors">
                 <Facebook size={18} />
               </Link>
-              <Link href="/" className="text-gray-500 hover:text-gray-800 transition-colors">
+              <Link href="/" aria-label="Visit our Instagram profile" className="text-gray-500 hover:text-gray-800 transition-colors">
                 <Instagram size={18} />
               </Link>
-              <Link href="/" className="text-gray-500 hover:text-gray-800 transition-colors">
+              <Link href="/" aria-label="Visit our Twitter profile" className="text-gray-500 hover:text-gray-800 transition-colors">
                 <Twitter size={18} />
               </Link>
             </div>

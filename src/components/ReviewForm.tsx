@@ -11,7 +11,15 @@ import { useRouter } from 'next/navigation';
 
 interface ReviewFormProps {
   productId: string;
-  onSuccess?: () => void;
+  onSuccess?: (reviewData: {
+    rating: number;
+    title: string;
+    comment: string;
+    images: {
+      url: string;
+      fileId: string;
+    }[];
+  }) => void;
   onCancel?: () => void;
   existingReview?: {
     id: string;
@@ -85,28 +93,41 @@ export function ReviewForm({ productId, onSuccess, onCancel, existingReview }: R
     
     try {
       setIsSubmitting(true);
+      console.log('Submitting review for product:', productId);
+      
+      // Create the review data object
+      const reviewData = {
+        productId,
+        rating,
+        title,
+        comment,
+        images: images.map(img => ({
+          url: img.url,
+          fileId: img.fileId
+        }))
+      };
+      
+      console.log('Review data being sent:', reviewData);
       
       const response = await fetch('/api/reviews', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          productId,
-          rating,
-          title,
-          comment,
-          images: images.map(img => ({
-            url: img.url,
-            fileId: img.fileId
-          }))
-        }),
+        body: JSON.stringify(reviewData),
+        cache: 'no-store',
+        credentials: 'include'
       });
       
+      console.log('Review submission response status:', response.status);
+      
       if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || 'Failed to submit review');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to submit review');
       }
+      
+      const responseData = await response.json();
+      console.log('Review submission successful, received data:', responseData);
       
       toast.success('Review submitted successfully');
       
@@ -116,12 +137,21 @@ export function ReviewForm({ productId, onSuccess, onCancel, existingReview }: R
       setComment('');
       setImages([]);
       
-      // Callback on success
+      // Callback on success with the review data
       if (onSuccess) {
-        onSuccess();
+        onSuccess({ 
+          rating, 
+          title, 
+          comment, 
+          images: images.map(img => ({
+            url: img.url,
+            fileId: img.fileId
+          })) 
+        });
       }
       
     } catch (error: any) {
+      console.error('Error submitting review:', error);
       toast.error(error.message || 'Failed to submit review');
     } finally {
       setIsSubmitting(false);
