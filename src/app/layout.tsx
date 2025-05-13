@@ -1,12 +1,16 @@
 import "./globals.css";
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Bricolage_Grotesque } from "next/font/google";
 import { ReactQueryProvider } from "@/providers/react-query-provider";
 import { AuthProvider } from "@/providers/auth-provider";
 import { CartProvider } from "@/context/CartContext";
 import { Toaster } from "sonner";
 
-const inter = Inter({ subsets: ["latin"] });
+const bricolage = Bricolage_Grotesque({ 
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700"],
+  variable: "--font-bricolage",
+});
 
 export const metadata: Metadata = {
   title: "UrbanIQ | Smart Pet Products",
@@ -20,7 +24,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={inter.className}>
+      <body className={`${bricolage.variable} font-bricolage`}>
         <AuthProvider>
           <ReactQueryProvider>
             <CartProvider>

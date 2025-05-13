@@ -6,6 +6,7 @@ import { SmoothScroll } from "@/components/SmoothScroll";
 import "../../app/globals.css";
 import Image from "next/image";
 
+// Load Geist as secondary fonts
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -18,10 +19,12 @@ const geistMono = Geist_Mono({
   display: 'swap',
 });
 
+// Load Bricolage Grotesque as primary font
 const bricolage = Bricolage_Grotesque({
   variable: "--font-bricolage",
   subsets: ["latin"],
   display: 'swap',
+  weight: ["300", "400", "500", "600", "700"],
 });
 
 // Early Image Loading Component
@@ -53,7 +56,7 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} ${bricolage.variable} antialiased font-sans`}
+        className={`${geistSans.variable} ${geistMono.variable} ${bricolage.variable} antialiased font-bricolage`}
         suppressHydrationWarning
       >
         <PreloadImages />
