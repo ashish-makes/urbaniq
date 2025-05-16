@@ -9,8 +9,13 @@ import { useCheckout } from "@/hooks/useCheckout";
 import Image from "next/image";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
 
-export function CartSidebar() {
+interface CartSidebarProps {
+  isAboutPage?: boolean;
+}
+
+export function CartSidebar({ isAboutPage = false }: CartSidebarProps) {
   const { 
     items, 
     cartCount, 
@@ -40,16 +45,27 @@ export function CartSidebar() {
   return (
     <Sheet open={isCartOpen} onOpenChange={(open) => open ? openCart() : closeCart()}>
       <SheetTrigger asChild>
-        <button 
-          className="rounded-full h-7 w-7 p-0 flex items-center justify-center hover:bg-gray-100 transition-colors relative flex-shrink-0"
+        <motion.button 
+          className="rounded-full h-7 w-7 p-0 flex items-center justify-center relative flex-shrink-0"
           aria-label="Open cart"
           onClick={() => openCart()}
+          whileHover={{ 
+            backgroundColor: isAboutPage ? '#0c151c' : 'rgb(243, 244, 246)' 
+          }}
+          transition={{ duration: 0.2 }}
         >
-          <ShoppingCart size={16} strokeWidth={1.5} />
-          <span className="absolute -top-1 -right-1 bg-black text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center">
+          <motion.div
+            animate={{ 
+              color: isAboutPage ? 'rgb(255, 255, 255)' : 'rgb(31, 41, 55)'
+            }}
+            transition={{ duration: 0.3 }}
+          >
+            <ShoppingCart size={16} strokeWidth={1.5} />
+          </motion.div>
+          <span className={`absolute -top-1 -right-1 ${isAboutPage ? 'bg-white text-black' : 'bg-black text-white'} text-[10px] rounded-full w-4 h-4 flex items-center justify-center`}>
             {cartCount}
           </span>
-        </button>
+        </motion.button>
       </SheetTrigger>
       <SheetContent side="right" className="cart-sidebar w-[280px] sm:w-[350px] p-0 bg-white focus-visible:outline-none rounded-tl-2xl rounded-bl-2xl">
         <div className="flex flex-col h-full">

@@ -94,6 +94,14 @@ module.exports = {
           "0%": { opacity: 1 },
           "100%": { opacity: 0 },
         },
+        "pulse-slow": {
+          "0%, 100%": { opacity: 0.4 },
+          "50%": { opacity: 0.6 }
+        },
+        "pulse-slower": {
+          "0%, 100%": { opacity: 0.3 },
+          "50%": { opacity: 0.5 }
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -106,6 +114,8 @@ module.exports = {
         "fade-out": "fade-out 0.3s ease-out",
         "in": "fade-in 0.3s ease-in",
         "out": "fade-out 0.3s ease-out",
+        "pulse-slow": "pulse-slow 6s ease-in-out infinite",
+        "pulse-slower": "pulse-slower 8s ease-in-out infinite",
       },
     },
   },
