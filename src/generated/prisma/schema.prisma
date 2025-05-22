@@ -1,0 +1,250 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String         @id @default(auto()) @map("_id") @db.ObjectId
+  name          String?
+  email         String         @unique
+  emailVerified DateTime?
+  image         String?
+  password      String?
+  role          Role           @default(USER)
+  // Profile fields
+  phone         String?
+  address       String?
+  city          String?
+  state         String?
+  postalCode    String?
+  country       String?
+  // Relations
+  accounts      Account[]
+  sessions      Session[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  carts         Cart[]
+  orders        Order[] // Relation to orders
+  wishlist      WishlistItem[] // Relation to wishlist items
+  reviews       Review[]
+}
+
+model Account {
+  id                String  @id @default(auto()) @map("_id") @db.ObjectId
+  userId            String  @db.ObjectId
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  sessionToken String   @unique
+  userId       String   @db.ObjectId
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Category {
+  id          String    @id @default(auto()) @map("_id") @db.ObjectId
+  name        String
+  slug        String    @unique
+  description String?
+  image       String?
+  products    Product[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  isActive    Boolean   @default(true)
+}
+
+model Product {
+  id              String         @id @default(auto()) @map("_id") @db.ObjectId
+  name            String
+  slug            String         @unique
+  description     String?
+  longDescription String?
+  price           Float
+  originalPrice   Float?
+  stock           Int            @default(0)
+  categoryId      String?        @db.ObjectId
+  category        Category?      @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  categoryName    String? // Denormalized field for easy access to category name
+  images          String[] // Array of image URLs
+  rating          Float          @default(0)
+  reviewCount     Int            @default(0)
+  isBestseller    Boolean        @default(false)
+  features        String[]
+  specs           Json? // Storing specifications as JSON
+  colors          String[]
+  inStock         Boolean        @default(true)
+  freeShipping    Boolean        @default(false)
+  tags            String[]
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  featured        Boolean        @default(false)
+  cartItems       CartItem[]
+  orderItems      OrderItem[] // Relation to order items
+  wishlistItems   WishlistItem[] // Relation to wishlist items
+  reviews         Review[]
+}
+
+model Cart {
+  id        String     @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String?    @db.ObjectId
+  user      User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items     CartItem[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  sessionId String? // For guest users without an account
+
+  @@index([userId])
+  @@index([sessionId])
+}
+
+model CartItem {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  cartId    String   @db.ObjectId
+  cart      Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  productId String   @db.ObjectId
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  quantity  Int      @default(1)
+  price     Float // Store price at time of adding to cart
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([cartId])
+  @@index([productId])
+}
+
+// New Order model to store customer orders
+model Order {
+  id              String      @id @default(auto()) @map("_id") @db.ObjectId
+  orderNumber     String      @unique // Readable order ID (e.g., ORD-12345)
+  userId          String?     @db.ObjectId
+  user            User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+  customerEmail   String // Store even if user is not registered
+  customerName    String?
+  items           OrderItem[]
+  subtotal        Float // Pre-tax, pre-shipping amount
+  tax             Float // Tax amount
+  shippingCost    Float // Shipping cost
+  total           Float // Total order amount
+  currency        String      @default("USD")
+  paymentMethod   String // e.g., "stripe", "paypal"
+  paymentId       String? // ID from payment provider
+  status          OrderStatus @default(PENDING)
+  shippingAddress Json // Stored as JSON with address fields
+  billingAddress  Json? // Optional separate billing address
+  notes           String? // Optional order notes
+  shippingMethod  String? // e.g., "standard", "express"
+  trackingNumber  String? // Shipping tracking number
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+// Items within an order
+model OrderItem {
+  id          String  @id @default(auto()) @map("_id") @db.ObjectId
+  orderId     String  @db.ObjectId
+  order       Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId   String  @db.ObjectId
+  product     Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+  name        String // Store name at time of purchase
+  description String? // Store description at time of purchase
+  price       Float // Store price at time of purchase
+  quantity    Int
+  image       String? // Store main product image URL
+
+  @@index([orderId])
+  @@index([productId])
+}
+
+// Wishlist model to store user favorite products
+model WishlistItem {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId    String   @db.ObjectId
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId String   @db.ObjectId
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, productId]) // Ensure a product can only be added once to a user's wishlist
+  @@index([userId])
+  @@index([productId])
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum OrderStatus {
+  PENDING // Order received, not yet processed
+  PROCESSING // Order is being processed
+  SHIPPED // Order has been shipped
+  DELIVERED // Order has been delivered
+  CANCELLED // Order was cancelled
+  REFUNDED // Order was refunded
+}
+
+model Review {
+  id        String        @id @default(auto()) @map("_id") @db.ObjectId
+  productId String        @db.ObjectId
+  product   Product       @relation(fields: [productId], references: [id], onDelete: Cascade)
+  userId    String?       @db.ObjectId
+  user      User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  username  String
+  rating    Int
+  title     String
+  comment   String
+  date      DateTime      @default(now())
+  helpful   Int           @default(0)
+  verified  Boolean       @default(false)
+  images    ReviewImage[]
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+}
+
+model ReviewImage {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  reviewId  String   @db.ObjectId
+  review    Review   @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  url       String
+  fileId    String   @unique
+  createdAt DateTime @default(now())
+}

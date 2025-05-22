@@ -3,7 +3,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { motion, useScroll, useTransform, useInView, AnimatePresence } from 'framer-motion';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Lightbulb, PawPrint, Leaf, Instagram, Linkedin, ArrowRight } from 'lucide-react';
 
 // Twitter X SVG icon component
@@ -18,6 +18,14 @@ export default function AboutContent() {
   const { scrollYProgress } = useScroll();
   const backgroundY = useTransform(scrollYProgress, [0, 1], ["0%", "20%"]);
   
+  // Video loading states
+  const [heroVideoLoaded, setHeroVideoLoaded] = useState(false);
+  const [missionVideoLoaded, setMissionVideoLoaded] = useState(false);
+  
+  // Video references
+  const heroVideoRef = useRef<HTMLVideoElement>(null);
+  const missionVideoRef = useRef<HTMLVideoElement>(null);
+  
   // Animation references for scroll triggered animations
   const missionRef = useRef<HTMLDivElement>(null);
   const valuesRef = useRef<HTMLDivElement>(null);
@@ -29,6 +37,47 @@ export default function AboutContent() {
   const valuesInView = useInView(valuesRef, { once: true, amount: 0.3 });
   const teamInView = useInView(teamRef, { once: true, amount: 0.3 });
   const ctaInView = useInView(ctaRef, { once: true, amount: 0.3 });
+
+  // Handle video loading
+  useEffect(() => {
+    // Hero video loading
+    if (heroVideoRef.current) {
+      if (heroVideoRef.current.readyState >= 3) {
+        setHeroVideoLoaded(true);
+      } else {
+        heroVideoRef.current.addEventListener('canplay', () => {
+          setHeroVideoLoaded(true);
+        });
+      }
+    }
+    
+    // Mission video loading - only start loading when it comes into view
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting && missionVideoRef.current) {
+          missionVideoRef.current.src = '/mission.mp4';
+          missionVideoRef.current.addEventListener('canplay', () => {
+            setMissionVideoLoaded(true);
+          });
+          observer.disconnect();
+        }
+      });
+    }, { threshold: 0.1 });
+    
+    if (missionVideoRef.current) {
+      observer.observe(missionVideoRef.current);
+    }
+    
+    return () => {
+      observer.disconnect();
+      if (heroVideoRef.current) {
+        heroVideoRef.current.removeEventListener('canplay', () => setHeroVideoLoaded(true));
+      }
+      if (missionVideoRef.current) {
+        missionVideoRef.current.removeEventListener('canplay', () => setMissionVideoLoaded(true));
+      }
+    };
+  }, []);
 
   // Animation variants
   const staggerVariants = {
@@ -118,22 +167,43 @@ export default function AboutContent() {
     <main className="flex-grow">
       {/* Hero Section */}
       <section id="about-hero" className="relative h-screen w-full overflow-hidden">
+        {/* Background placeholder image */}
+        <div className="absolute inset-0 w-full h-full bg-black">
+          <Image 
+            src="/hero-placeholder.jpg" 
+            alt="Hero background" 
+            fill 
+            className="object-cover opacity-80"
+            priority
+          />
+        </div>
+        
         {/* Background video */}
-        <video 
-          autoPlay 
-          muted 
-          loop 
-          playsInline
-          className="absolute inset-0 w-full h-full object-cover z-0"
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: heroVideoLoaded ? 1 : 0 }}
+          transition={{ duration: 0.8 }}
+          className="absolute inset-0 w-full h-full z-0"
         >
-          <source src="/hero.mp4" type="video/mp4" />
-          Your browser does not support the video tag.
-        </video>
+          <video 
+            ref={heroVideoRef}
+            autoPlay 
+            muted 
+            loop 
+            playsInline
+            className="absolute inset-0 w-full h-full object-cover"
+            poster="/hero-poster.jpg"
+            onError={() => console.error("Error loading hero video")}
+          >
+            <source src="/hero.mp4" type="video/mp4" />
+            Your browser does not support the video tag.
+          </video>
+        </motion.div>
 
-        <div className="absolute inset-0 bg-black/30"></div>
+        <div className="absolute inset-0 bg-black/30 z-1"></div>
         
         {/* Gradient overlay on the right side */}
-        <div className="absolute top-0 bottom-0 right-0 w-full md:w-5/6 lg:w-3/4" 
+        <div className="absolute top-0 bottom-0 right-0 w-full md:w-5/6 lg:w-3/4 z-1" 
           style={{ 
             background: 'linear-gradient(270deg, rgba(0,0,0,0.98) 0%, rgba(0,0,0,0.96) 20%, rgba(0,0,0,0.94) 30%, rgba(0,0,0,0.92) 40%, rgba(0,0,0,0.85) 50%, rgba(0,0,0,0.75) 60%, rgba(0,0,0,0.6) 70%, rgba(0,0,0,0.4) 80%, rgba(0,0,0,0.2) 90%, rgba(0,0,0,0) 100%)',
             backdropFilter: 'blur(3px)'
@@ -220,22 +290,42 @@ export default function AboutContent() {
 
       {/* Mission & Vision Section */}
       <section className="py-16 md:py-24 relative bg-cover bg-center bg-fixed overflow-hidden" ref={missionRef}>
-        {/* Background video */}
-        <video 
-          autoPlay 
-          muted 
-          loop 
-          playsInline
-          className="absolute inset-0 w-full h-full object-cover z-0"
+        {/* Background placeholder image */}
+        <div className="absolute inset-0 w-full h-full bg-gray-900">
+          <Image 
+            src="/mission-placeholder.jpg" 
+            alt="Mission background" 
+            fill 
+            className="object-cover opacity-60"
+          />
+        </div>
+        
+        {/* Background video - lazy loaded */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: missionVideoLoaded ? 1 : 0 }}
+          transition={{ duration: 0.8 }}
+          className="absolute inset-0 w-full h-full z-0"
         >
-          <source src="/mission.mp4" type="video/mp4" />
-          Your browser does not support the video tag.
-        </video>
+          <video 
+            ref={missionVideoRef}
+            autoPlay 
+            muted 
+            loop 
+            playsInline
+            className="absolute inset-0 w-full h-full object-cover"
+            poster="/mission-poster.jpg"
+            onError={() => console.error("Error loading mission video")}
+          >
+            {/* Source will be added dynamically when in view */}
+            Your browser does not support the video tag.
+          </video>
+        </motion.div>
 
-        <div className="absolute inset-0 bg-black/30"></div>
+        <div className="absolute inset-0 bg-black/30 z-1"></div>
         
         {/* Gradient overlay on the left side */}
-        <div className="absolute top-0 bottom-0 left-0 w-full md:w-5/6 lg:w-3/4" 
+        <div className="absolute top-0 bottom-0 left-0 w-full md:w-5/6 lg:w-3/4 z-1" 
           style={{ 
             background: 'linear-gradient(90deg, rgba(0,0,0,0.98) 0%, rgba(0,0,0,0.96) 20%, rgba(0,0,0,0.94) 30%, rgba(0,0,0,0.92) 40%, rgba(0,0,0,0.85) 50%, rgba(0,0,0,0.75) 60%, rgba(0,0,0,0.6) 70%, rgba(0,0,0,0.4) 80%, rgba(0,0,0,0.2) 90%, rgba(0,0,0,0) 100%)',
             backdropFilter: 'blur(3px)'
