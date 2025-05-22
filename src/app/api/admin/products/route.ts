@@ -298,33 +298,31 @@ export async function DELETE(req: NextRequest) {
       );
     }
     
-    // Get product to delete its images
+    // Get product to retrieve its images
     const product = await prisma.product.findUnique({
       where: { id },
     });
     
-    if (product && product.images) {
-      // Delete images from ImageKit
-      for (const imageUrl of product.images) {
-        try {
-          // Extract the file ID from the ImageKit URL
-          const fileId = imageUrl.split('/').pop();
-          if (fileId) {
-            await imagekit.deleteFile(fileId);
-          }
-        } catch (imageError) {
-          console.error('Error deleting image:', imageError);
-          // Continue with deletion even if image deletion fails
-        }
-      }
+    if (!product) {
+      return NextResponse.json(
+        { error: 'Product not found' }, 
+        { status: 404 }
+      );
     }
     
-    // Delete the product
+    // We'll collect image URLs to display in the response
+    const imageUrls = product.images || [];
+    
+    // Just delete the product from the database
     await prisma.product.delete({
       where: { id },
     });
     
-    return NextResponse.json({ message: 'Product deleted successfully' });
+    return NextResponse.json({ 
+      message: 'Product deleted successfully',
+      note: 'Product images must be deleted manually from the ImageKit Media Library.',
+      imageUrls: imageUrls
+    });
   } catch (error) {
     console.error('Error deleting product:', error);
     return NextResponse.json(

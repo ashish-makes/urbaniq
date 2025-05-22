@@ -199,20 +199,14 @@ export function Header() {
                 className={`w-56 shadow-lg transition-all duration-300 ${isDarkTheme ? 'bg-[#060a0d] border-[#030507] text-gray-200 shadow-[#030507]/50' : 'bg-white border-gray-200 text-gray-800 shadow-gray-200/70'}`}
               >
                 <DropdownMenuItem asChild className={`${isDarkTheme ? 'focus:bg-[#0c151c] focus:text-white data-[highlighted]:bg-[#0c151c] data-[highlighted]:text-white' : ''}`}>
-                  <Link href="/dogs/tech-essentials" className={`w-full cursor-pointer transition-colors duration-150`}>Smart Tech Essentials</Link>
+                  <Link href="/products/category/smart-feeders" className={`w-full cursor-pointer transition-colors duration-150`}>Smart Feeders</Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild className={`${isDarkTheme ? 'focus:bg-[#0c151c] focus:text-white data-[highlighted]:bg-[#0c151c] data-[highlighted]:text-white' : ''}`}>
-                  <Link href="/dogs/activity-trackers" className={`w-full cursor-pointer transition-colors duration-150`}>Activity Trackers</Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild className={`${isDarkTheme ? 'focus:bg-[#0c151c] focus:text-white data-[highlighted]:bg-[#0c151c] data-[highlighted]:text-white' : ''}`}>
-                  <Link href="/dogs/feeding" className={`w-full cursor-pointer transition-colors duration-150`}>Smart Feeding Solutions</Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild className={`${isDarkTheme ? 'focus:bg-[#0c151c] focus:text-white data-[highlighted]:bg-[#0c151c] data-[highlighted]:text-white' : ''}`}>
-                  <Link href="/dogs/toys" className={`w-full cursor-pointer transition-colors duration-150`}>Interactive Toys</Link>
+                  <Link href="/products/category/cameras" className={`w-full cursor-pointer transition-colors duration-150`}>Cameras</Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator className={isDarkTheme ? 'bg-[#0c151c]' : ''} />
                 <DropdownMenuItem asChild className={`${isDarkTheme ? 'focus:bg-[#0c151c] focus:text-white data-[highlighted]:bg-[#0c151c] data-[highlighted]:text-white' : ''}`}>
-                  <Link href="/dogs/all" className={`w-full cursor-pointer transition-colors duration-150`}>All Dog Products</Link>
+                  <Link href="/products" className={`w-full cursor-pointer transition-colors duration-150`}>All Dog Products</Link>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -242,70 +236,21 @@ export function Header() {
                 className={`w-56 shadow-lg transition-all duration-300 ${isDarkTheme ? 'bg-[#060a0d] border-[#030507] text-gray-200 shadow-[#030507]/50' : 'bg-white border-gray-200 text-gray-800 shadow-gray-200/70'}`}
               >
                 <DropdownMenuItem asChild className={`${isDarkTheme ? 'focus:bg-[#0c151c] focus:text-white data-[highlighted]:bg-[#0c151c] data-[highlighted]:text-white' : ''}`}>
-                  <Link href="/cats/tech-essentials" className={`w-full cursor-pointer transition-colors duration-150`}>Smart Tech Essentials</Link>
+                  <Link href="/products/category/smart-feeders" className={`w-full cursor-pointer transition-colors duration-150`}>Smart Feeders</Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild className={`${isDarkTheme ? 'focus:bg-[#0c151c] focus:text-white data-[highlighted]:bg-[#0c151c] data-[highlighted]:text-white' : ''}`}>
-                  <Link href="/cats/activity-trackers" className={`w-full cursor-pointer transition-colors duration-150`}>Activity Trackers</Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild className={`${isDarkTheme ? 'focus:bg-[#0c151c] focus:text-white data-[highlighted]:bg-[#0c151c] data-[highlighted]:text-white' : ''}`}>
-                  <Link href="/cats/litter" className={`w-full cursor-pointer transition-colors duration-150`}>Smart Litter Solutions</Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild className={`${isDarkTheme ? 'focus:bg-[#0c151c] focus:text-white data-[highlighted]:bg-[#0c151c] data-[highlighted]:text-white' : ''}`}>
-                  <Link href="/cats/toys" className={`w-full cursor-pointer transition-colors duration-150`}>Interactive Toys</Link>
+                  <Link href="/products/category/cameras" className={`w-full cursor-pointer transition-colors duration-150`}>Cameras</Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator className={isDarkTheme ? 'bg-[#0c151c]' : ''} />
                 <DropdownMenuItem asChild className={`${isDarkTheme ? 'focus:bg-[#0c151c] focus:text-white data-[highlighted]:bg-[#0c151c] data-[highlighted]:text-white' : ''}`}>
-                  <Link href="/cats/all" className={`w-full cursor-pointer transition-colors duration-150`}>All Cat Products</Link>
+                  <Link href="/products" className={`w-full cursor-pointer transition-colors duration-150`}>All Cat Products</Link>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
             
-            {/* Smart Home */}
-            <DropdownMenu>
-              <DropdownMenuTrigger className="text-sm font-medium flex items-center gap-1.5 focus:outline-none transition-colors">
-                <motion.span
-                  animate={{ 
-                    color: isDarkTheme ? 'rgb(255, 255, 255)' : 'rgb(31, 41, 55)'
-                  }}
-                  transition={{ duration: 0.3 }}
-                >
-                  Smart Home
-                </motion.span>
-                <motion.span
-                  animate={{
-                    color: isDarkTheme ? 'rgb(209, 213, 219)' : 'rgb(107, 114, 128)'
-                  }}
-                  transition={{ duration: 0.3 }}
-                >
-                  <ChevronDown size={14} />
-                </motion.span>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent 
-                align="start" 
-                className={`w-56 shadow-lg transition-all duration-300 ${isDarkTheme ? 'bg-[#060a0d] border-[#030507] text-gray-200 shadow-[#030507]/50' : 'bg-white border-gray-200 text-gray-800 shadow-gray-200/70'}`}
-              >
-                <DropdownMenuItem asChild className={`${isDarkTheme ? 'focus:bg-[#0c151c] focus:text-white data-[highlighted]:bg-[#0c151c] data-[highlighted]:text-white' : ''}`}>
-                  <Link href="/smart-home/feeders" className={`w-full cursor-pointer transition-colors duration-150`}>Automatic Feeders</Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild className={`${isDarkTheme ? 'focus:bg-[#0c151c] focus:text-white data-[highlighted]:bg-[#0c151c] data-[highlighted]:text-white' : ''}`}>
-                  <Link href="/smart-home/cameras" className={`w-full cursor-pointer transition-colors duration-150`}>Pet Cameras & Monitors</Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild className={`${isDarkTheme ? 'focus:bg-[#0c151c] focus:text-white data-[highlighted]:bg-[#0c151c] data-[highlighted]:text-white' : ''}`}>
-                  <Link href="/smart-home/doors" className={`w-full cursor-pointer transition-colors duration-150`}>Smart Pet Doors</Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild className={`${isDarkTheme ? 'focus:bg-[#0c151c] focus:text-white data-[highlighted]:bg-[#0c151c] data-[highlighted]:text-white' : ''}`}>
-                  <Link href="/smart-home/accessories" className={`w-full cursor-pointer transition-colors duration-150`}>Smart Accessories</Link>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator className={isDarkTheme ? 'bg-[#0c151c]' : ''} />
-                <DropdownMenuItem asChild className={`${isDarkTheme ? 'focus:bg-[#0c151c] focus:text-white data-[highlighted]:bg-[#0c151c] data-[highlighted]:text-white' : ''}`}>
-                  <Link href="/smart-home/all" className={`w-full cursor-pointer transition-colors duration-150`}>All Smart Home</Link>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            
-            {/* Deals & Bundles */}
+            {/* About */}
             <Link 
-              href="/deals" 
+              href="/about" 
               className="text-sm font-medium transition-colors relative group"
             >
               <motion.span
@@ -314,7 +259,7 @@ export function Header() {
                 }}
                 transition={{ duration: 0.3 }}
               >
-                Deals & Bundles
+                About
               </motion.span>
               <motion.span 
                 className="absolute -bottom-1 left-0 w-0 h-0.5 group-hover:w-full transition-all duration-300"
@@ -325,9 +270,9 @@ export function Header() {
               ></motion.span>
             </Link>
             
-            {/* New Arrivals */}
+            {/* Contact */}
             <Link 
-              href="/new" 
+              href="/contact" 
               className="text-sm font-medium transition-colors relative group"
             >
               <motion.span
@@ -336,7 +281,7 @@ export function Header() {
                 }}
                 transition={{ duration: 0.3 }}
               >
-                New Arrivals
+                Contact
               </motion.span>
               <motion.span 
                 className="absolute -bottom-1 left-0 w-0 h-0.5 group-hover:w-full transition-all duration-300"

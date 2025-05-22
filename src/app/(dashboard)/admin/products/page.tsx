@@ -79,15 +79,28 @@ export default function ProductsPage() {
         method: 'DELETE',
       });
 
+      const responseData = await response.json();
+
       if (!response.ok) {
-        throw new Error('Failed to delete product');
+        throw new Error(responseData.error || 'Failed to delete product');
       }
 
+      // Update UI even if there were image deletion issues
       setProducts(products.filter((product) => product.id !== id));
-      toast.success('Product deleted successfully');
+      
+      // Show success message
+      toast.success('Product deleted successfully from database');
+      
+      // Show note about manual image deletion if needed
+      if (responseData.note) {
+        toast.warning(responseData.note, {
+          duration: 8000, // longer duration so admin can read it
+        });
+      }
+      
     } catch (error) {
       console.error('Error deleting product:', error);
-      toast.error('Failed to delete product');
+      toast.error('Failed to delete product: ' + (error instanceof Error ? error.message : 'Unknown error'));
     } finally {
       setIsDeleting(null);
     }
