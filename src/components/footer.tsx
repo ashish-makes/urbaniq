@@ -1,7 +1,11 @@
 import Link from "next/link";
+import Image from "next/image";
 import { Facebook, Instagram, Twitter, MapPin, Mail, Phone, ArrowUpRight } from "lucide-react";
 
 export function Footer() {
+  // Get current year dynamically
+  const currentYear = new Date().getFullYear();
+  
   return (
     <footer className="bg-white pt-16 pb-0 relative overflow-hidden">
       {/* Main footer content */}
@@ -119,20 +123,20 @@ export function Footer() {
               </li>
               <li className="flex items-center">
                 <Mail size={18} className="text-gray-500 mr-2 flex-shrink-0" />
-                <span className="text-gray-600 text-sm">support@urbanpaws.com</span>
+                <span className="text-gray-600 text-sm">info@urbaniq.ca</span>
               </li>
             </ul>
             <div className="mt-4">
               <h4 className="text-xs font-medium text-gray-500 mb-2">Payment Methods</h4>
-              <div className="flex space-x-2">
-                <div className="h-8 w-12 bg-white border border-gray-200 rounded-md flex items-center justify-center">
-                  <svg viewBox="0 0 32 21" width="28" height="18" xmlns="http://www.w3.org/2000/svg"><g fill="none" fillRule="evenodd"><g fillRule="nonzero"><rect fill="#252525" width="32" height="21" rx="2"/><path d="M11.66 7.177c0-.82.58-1.24 1.693-1.24.92 0 1.874.267 2.755.76V4.62c-.92-.427-1.853-.64-2.755-.64-2.262 0-3.839 1.133-3.839 3.29 0 3.944 5.404 3.304 5.404 5.011 0 .854-.72 1.284-1.873 1.284-1.06 0-2.182-.437-3.162-1.07v2.116c1.06.541 2.14.82 3.162.82 2.342 0 4.059-1.112 4.059-3.29-.04-4.244-5.444-3.517-5.444-4.965zm10.2-3.09h-2.06v8.302c0 1.261.501 2.137 2.08 2.137.673 0 1.194-.097 1.612-.274v-1.777c-.307.11-.818.179-1.156.179-.557 0-.78-.296-.78-.895v-2.66h1.957V7.156h-1.653V4.086zm-23.203.82v7.974h2.16V4.907h-2.16zm12.705 0l-2.14 5.17-2.14-5.17h-2.32l3.31 7.533-.098 2.062c-.105.427-.334.555-.88.555-.213 0-.507-.02-.696-.04v1.736c.313.04.626.06.96.06 1.854 0 2.814-.854 3.44-3.03L18.87 4.906h-2.302z" fill="#FFF"/></g></g></svg>
+              <div className="flex space-x-3">
+                <div className="h-8 w-12 bg-white border border-gray-200 rounded-md flex items-center justify-center overflow-hidden">
+                  <Image src="/applepay.png" alt="Apple Pay" width={40} height={24} />
                 </div>
-                <div className="h-8 w-12 bg-white border border-gray-200 rounded-md flex items-center justify-center">
-                  <svg viewBox="0 0 32 21" width="28" height="18" xmlns="http://www.w3.org/2000/svg"><g fill="none" fillRule="evenodd"><g fillRule="nonzero"><rect fill="#252525" width="32" height="21" rx="2"/><rect fill="#FF5F00" x="11.5" y="6.5" width="9" height="8"/><path d="M12.801 10.5a5.052 5.052 0 0 1 1.94-4A5.08 5.08 0 0 0 11 5a5.08 5.08 0 0 0-5 5.142 5.08 5.08 0 0 0 5 5.142 5.08 5.08 0 0 0 3.74-1.5 5.052 5.052 0 0 1-1.94-4z" fill="#EB001B"/><path d="M23 10.5a5.08 5.08 0 0 1-5 5.142 5.08 5.08 0 0 1-3.74-1.5 5.052 5.052 0 0 0 0-8 5.08 5.08 0 0 1 3.74-1.5A5.08 5.08 0 0 1 23 10.5z" fill="#F79E1B"/></g></g></svg>
+                <div className="h-8 w-12 bg-white border border-gray-200 rounded-md flex items-center justify-center overflow-hidden">
+                  <Image src="/mastercard.png" alt="Mastercard" width={40} height={24} />
                 </div>
-                <div className="h-8 w-12 bg-white border border-gray-200 rounded-md flex items-center justify-center">
-                  <svg viewBox="0 0 32 21" width="28" height="18" xmlns="http://www.w3.org/2000/svg"><g fill="none" fillRule="evenodd"><g fillRule="nonzero"><rect fill="#252525" width="32" height="21" rx="2"/><path d="M15.51 12.27c.06-.78-.18-1.56-.69-2.1-.51-.54-1.23-.9-2.04-.96h-.03c-.03 0-.06-.03-.06-.06v-.96c0-.03.03-.06.06-.06h.15c.81-.06 1.53-.39 2.01-.9a2.73 2.73 0 0 0 .72-2.01 3.4 3.4 0 0 0-2.55-3.15.06.06 0 0 1-.03-.06V2a.06.06 0 0 1 .06-.06h1.5c.03 0 .06.03.06.06v.06c1.44.27 2.61 1.29 3.06 2.67.24.69.24 1.44.06 2.13a3.036 3.036 0 0 1-.96 1.56c-.06.03-.09.09-.03.15.18.21.33.42.45.66.33.72.42 1.53.24 2.31a3.693 3.693 0 0 1-1.49 2.24c-.66.42-1.44.63-2.22.63h-1.35a.06.06 0 0 1-.06-.06v-.06a.06.06 0 0 1 .03-.06 3.03 3.03 0 0 0 2.16-2.01zm-6.57 2.13h-1.5a.06.06 0 0 1-.06-.06V2a.06.06 0 0 1 .06-.06h1.5c.03 0 .06.03.06.06v12.33a.06.06 0 0 1-.06.06zm17.74-3.04c-.03 0-.06-.02-.08-.05L23.87 2c-.02-.03 0-.07.04-.07h1.79c.03 0 .05.02.06.04l1.72 5.73c.01.02.03.02.04 0l1.72-5.73a.06.06 0 0 1 .06-.04h1.79c.04 0 .06.04.04.07l-2.73 9.31a.7.07 0 0 1-.07.05h-1.85zm-5.58 0a.06.06 0 0 1-.06-.06V2c0-.03.03-.06.06-.06h1.5c.03 0 .06.03.06.06v9.29a.06.06 0 0 1-.06.06h-1.5z" fill="#FFF"/></g></g></svg>
+                <div className="h-8 w-12 bg-white border border-gray-200 rounded-md flex items-center justify-center overflow-hidden">
+                  <Image src="/visa.png" alt="Visa" width={40} height={24} />
                 </div>
               </div>
             </div>
@@ -142,7 +146,7 @@ export function Footer() {
         {/* Bottom section */}
         <div className="pt-6 border-t border-gray-200 mt-10 mb-6">
           <div className="flex flex-col md:flex-row justify-between items-center">
-            <p className="text-xs text-gray-500 mb-4 md:mb-0">© 2023 UrbanPaws. All Rights Reserved</p>
+            <p className="text-xs text-gray-500 mb-4 md:mb-0">© {currentYear} UrbanIQ. All Rights Reserved</p>
             <div className="flex flex-wrap gap-5">
               <Link href="/" className="text-xs text-gray-500 hover:text-gray-900 transition-colors group flex items-center">
                 <span>Terms</span>
