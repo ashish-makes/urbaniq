@@ -15,6 +15,36 @@ const bricolage = Bricolage_Grotesque({
 export const metadata: Metadata = {
   title: "UrbanIQ | Smart Pet Products",
   description: "UrbanIQ offers innovative, high-quality smart products for modern pet owners.",
+  metadataBase: new URL('https://urbaniq.ca'),
+  alternates: {
+    canonical: '/',
+  },
+  openGraph: {
+    type: 'website',
+    locale: 'en_US',
+    url: 'https://urbaniq.ca',
+    siteName: 'UrbanIQ',
+    title: 'UrbanIQ - Smart Pet Tech for Modern Pet Parents',
+    description: 'UrbanIQ offers innovative, high-quality smart products for modern pet owners.',
+    images: [
+      {
+        url: '/hero-one.png', // Create this image in your public folder
+        width: 1200,
+        height: 630,
+        alt: 'UrbanIQ',
+      },
+    ],
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
+  applicationName: 'UrbanIQ',
+  referrer: 'origin-when-cross-origin',
+  keywords: ['smart pet products', 'pet tech', 'pet camera', 'pet feeder', 'urbaniq'],
+  authors: [{ name: 'UrbanIQ' }],
+  creator: 'UrbanIQ',
+  publisher: 'UrbanIQ',
 };
 
 export default function RootLayout({
