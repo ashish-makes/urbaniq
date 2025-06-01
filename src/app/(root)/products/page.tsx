@@ -62,7 +62,7 @@ export const metadata: Metadata = {
     images: ['/twitter-image.jpg'],
   },
   alternates: {
-    canonical: 'https://urbaniq.vercel.app/products',
+    canonical: 'https://urbaniq.ca/products',
   },
 };
 
@@ -152,7 +152,7 @@ export default async function ProductsPage() {
         "name": product.name,
         "description": product.description,
         "image": product.images[0],
-        "url": `https://urbaniq.vercel.app/products/${product.slug}`,
+        "url": `https://urbaniq.ca/products/${product.slug}`,
         "sku": product.id,
         "offers": {
           "@type": "Offer",

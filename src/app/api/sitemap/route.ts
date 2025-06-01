@@ -21,8 +21,8 @@ export async function GET() {
       },
     });
 
-    // Base URL - replace with your actual domain in production
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://example.com';
+    // Base URL - ensure it doesn't have a trailing slash
+    const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || 'https://urbaniq.ca').replace(/\/$/, '');
 
     // Create the XML sitemap
     let xml = '<?xml version="1.0" encoding="UTF-8"?>\n';

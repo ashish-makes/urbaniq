@@ -18,4 +18,4 @@ Allow: /products/*
 Allow: /products/category/*
 
 # Sitemap
-Sitemap: https://urbaniq.vercel.app/api/sitemap 
+Sitemap: https://www.urbaniq.ca/api/sitemap 

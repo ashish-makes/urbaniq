@@ -10,7 +10,7 @@ export const metadata: Metadata = {
     title: 'Create Your UrbanIQ Account',
     description: 'Sign up for UrbanIQ Pet Tech and join our community of pet lovers. Create an account to access exclusive features and manage your pet tech devices.',
     type: 'website',
-    url: 'https://urbaniq.vercel.app/signup',
+    url: 'https://urbaniq.ca/signup',
     images: [
       {
         url: '/images/og-signup.jpg',
@@ -48,7 +48,7 @@ export default function SignupPage() {
               "name": "UrbanIQ Pet Tech",
               "logo": {
                 "@type": "ImageObject",
-                "url": "https://urbaniq.vercel.app/logo.png"
+                "url": "https://urbaniq.ca/logo.png"
               }
             },
             "breadcrumb": {
@@ -58,13 +58,13 @@ export default function SignupPage() {
                   "@type": "ListItem",
                   "position": 1,
                   "name": "Home",
-                  "item": "https://urbaniq.vercel.app"
+                  "item": "https://urbaniq.ca"
                 },
                 {
                   "@type": "ListItem",
                   "position": 2,
                   "name": "Sign Up",
-                  "item": "https://urbaniq.vercel.app/signup"
+                  "item": "https://urbaniq.ca/signup"
                 }
               ]
             },

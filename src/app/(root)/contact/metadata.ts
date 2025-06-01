@@ -7,7 +7,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'Contact UrbanIQ Pet Tech',
     description: 'Have questions about UrbanIQ pet tech products? Contact our support team for assistance or inquire about partnerships and wholesale opportunities.',
-    url: 'https://urbaniq.vercel.app/contact',
+    url: 'https://urbaniq.ca/contact',
     siteName: 'UrbanIQ Pet Tech',
     images: [
       {

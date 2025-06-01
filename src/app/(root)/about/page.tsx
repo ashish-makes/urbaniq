@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'About UrbanIQ | Smart Pet Technology for Modern Pet Owners',
     description: 'Learn about UrbanIQ\'s mission to revolutionize pet care through innovative smart technology solutions designed for modern urban pet owners.',
-    url: 'https://urbaniq.vercel.app/about',
+    url: 'https://urbaniq.ca/about',
     siteName: 'UrbanIQ Pet Tech',
     images: [
       {

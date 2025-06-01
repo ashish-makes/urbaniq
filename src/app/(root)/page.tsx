@@ -23,7 +23,7 @@ export const metadata: Metadata = {
   title: 'UrbanIQ - Smart Pet Tech for Modern Pet Parents',
   description: 'Smart pet technology for the modern pet parent. GPS trackers, automated feeders, smart toys, health monitors and more to keep your pets happy, healthy, and safe.',
   keywords: 'pet tech, smart pet devices, pet gadgets, dog tech, cat tech, automated pet feeders, pet GPS trackers, pet health monitors',
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://urbaniq.vercel.app/'),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://urbaniq.ca/'),
   openGraph: {
     title: 'UrbanIQ - Smart Pet Tech for Modern Pet Parents',
     description: 'Discover innovative smart technology for your pets. From GPS trackers to automated feeders, we help you care for your pets in the smartest way possible.',
@@ -47,7 +47,7 @@ export const metadata: Metadata = {
     images: ['/twitter-image.jpg'],
   },
   alternates: {
-    canonical: 'https://urbaniq.vercel.app/',
+    canonical: 'https://urbaniq.ca/',
   },
 }
 
@@ -123,10 +123,10 @@ export default async function Home() {
     "@context": "https://schema.org",
     "@type": "WebSite",
     "name": "UrbanIQ - Smart Pet Technology",
-    "url": "https://urbaniq.vercel.app/",
+    "url": "https://urbaniq.ca/",
     "potentialAction": {
       "@type": "SearchAction",
-      "target": "https://urbaniq.vercel.app/search?q={search_term_string}",
+      "target": "https://urbaniq.ca/search?q={search_term_string}",
       "query-input": "required name=search_term_string"
     },
     "description": "Smart pet technology for modern pet parents. Discover innovative gadgets to help care for your furry friends."
@@ -144,7 +144,7 @@ export default async function Home() {
         "name": product.name,
         "description": product.description,
         "image": product.images[0],
-        "url": `https://urbaniq.vercel.app/products/${product.slug}`,
+        "url": `https://urbaniq.ca/products/${product.slug}`,
         "sku": product.id,
         "offers": {
           "@type": "Offer",

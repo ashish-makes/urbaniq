@@ -71,7 +71,7 @@ export async function generateMetadata({ params }: { params: { slug: string } })
         description: 'The category you are looking for does not exist or may have been removed.',
       },
       alternates: {
-        canonical: `https://urbaniq.vercel.app/products/category/${slug}`,
+        canonical: `https://urbaniq.ca/products/category/${slug}`,
       }
     };
   }
@@ -102,7 +102,7 @@ export async function generateMetadata({ params }: { params: { slug: string } })
       description: categoryDescription,
     },
     alternates: {
-      canonical: `https://urbaniq.vercel.app/products/category/${slug}`,
+      canonical: `https://urbaniq.ca/products/category/${slug}`,
     }
   };
 }
@@ -219,7 +219,7 @@ export default async function CategoryProductsPage({ params }: { params: { slug:
     "@type": "CollectionPage",
     "name": `${category.name} Products`,
     "description": category.description,
-    "url": `https://urbaniq.vercel.app/products/category/${slug}`,
+    "url": `https://urbaniq.ca/products/category/${slug}`,
     "mainEntity": {
       "@type": "ItemList",
       "itemListElement": products.slice(0, 10).map((product, index) => ({
@@ -230,7 +230,7 @@ export default async function CategoryProductsPage({ params }: { params: { slug:
           "name": product.name,
           "description": product.description,
           "image": product.images[0],
-          "url": `https://urbaniq.vercel.app/products/${product.slug}`,
+          "url": `https://urbaniq.ca/products/${product.slug}`,
           "sku": product.id,
           "offers": {
             "@type": "Offer",

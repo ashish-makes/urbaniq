@@ -622,8 +622,8 @@ export default function AboutContent() {
             "@context": "https://schema.org",
             "@type": "Organization",
             "name": "UrbanIQ Pet Tech",
-            "url": "https://urbaniq.vercel.app",
-            "logo": "https://urbaniq.vercel.app/logo.png",
+            "url": "https://urbaniq.ca",
+            "logo": "https://urbaniq.ca/logo.png",
             "description": "UrbanIQ creates innovative smart technology solutions designed for modern urban pet owners.",
             "foundingDate": "2025",
             "founders": [

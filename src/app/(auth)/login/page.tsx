@@ -49,7 +49,7 @@ export default function LoginPage() {
               "name": "UrbanIQ Pet Tech",
               "logo": {
                 "@type": "ImageObject",
-                "url": "https://urbaniq.vercel.app/logo.png"
+                "url": "https://urbaniq.ca/logo.png"
               }
             },
             "breadcrumb": {
@@ -59,13 +59,13 @@ export default function LoginPage() {
                   "@type": "ListItem",
                   "position": 1,
                   "name": "Home",
-                  "item": "https://urbaniq.vercel.app"
+                  "item": "https://urbaniq.ca"
                 },
                 {
                   "@type": "ListItem",
                   "position": 2,
                   "name": "Login",
-                  "item": "https://urbaniq.vercel.app/login"
+                  "item": "https://urbaniq.ca/login"
                 }
               ]
             }

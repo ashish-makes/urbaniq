@@ -263,7 +263,7 @@ export default async function ProductDetailPage({ params }: { params: { slug: st
     },
     "offers": {
       "@type": "Offer",
-      "url": `https://urbaniq.vercel.app/products/${product.slug}`,
+      "url": `https://urbaniq.ca/products/${product.slug}`,
       "priceCurrency": "USD",
       "price": product.price,
       "priceValidUntil": new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 30 days from now

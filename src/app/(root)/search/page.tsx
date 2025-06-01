@@ -37,7 +37,7 @@ export async function generateMetadata({ searchParams }: { searchParams: { q?: s
       type: 'website',
     },
     alternates: {
-      canonical: `https://urbaniq.vercel.app/search${query ? `?q=${query}` : ''}`,
+      canonical: `https://urbaniq.ca/search${query ? `?q=${query}` : ''}`,
     }
   };
 }

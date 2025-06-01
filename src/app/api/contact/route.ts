@@ -456,7 +456,7 @@ export async function POST(request: Request) {
             
             <p>In the meantime, you might find answers to common questions in our support center. Our help documentation covers frequently asked questions and provides detailed product information.</p>
             
-            <a href="https://urbaniq.vercel.app/support" class="cta-button" style="display: inline-block; background-color: #000000; color: #ffffff !important; text-decoration: none; padding: 12px 25px; border-radius: 9999px; margin: 20px 0; font-weight: 500; text-align: center;">Visit Our Support Center</a>
+            <a href="https://urbaniq.ca/support" class="cta-button" style="display: inline-block; background-color: #000000; color: #ffffff !important; text-decoration: none; padding: 12px 25px; border-radius: 9999px; margin: 20px 0; font-weight: 500; text-align: center;">Visit Our Support Center</a>
             
             <div class="team-signature">
               <p>Thank you for your interest in UrbanIQ,</p>
@@ -475,9 +475,9 @@ export async function POST(request: Request) {
             <p>This is an automated email. Please do not reply directly.</p>
             
             <div class="support-links">
-              <a href="https://urbaniq.vercel.app/faq">FAQ</a>
-              <a href="https://urbaniq.vercel.app/contact">Contact</a>
-              <a href="https://urbaniq.vercel.app/privacy">Privacy</a>
+              <a href="https://urbaniq.ca/faq">FAQ</a>
+              <a href="https://urbaniq.ca/contact">Contact</a>
+              <a href="https://urbaniq.ca/privacy">Privacy</a>
             </div>
             
             <p>&copy; ${new Date().getFullYear()} UrbanIQ. All rights reserved.</p>
