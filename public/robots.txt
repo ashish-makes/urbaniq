@@ -1,0 +1,21 @@
+# UrbanIQ Robots.txt
+User-agent: *
+Allow: /
+
+# Disallow admin dashboard
+Disallow: /admin/
+Disallow: /(dashboard)/admin/
+
+# Disallow authentication pages
+Disallow: /(auth)/
+
+# Disallow checkout process
+Disallow: /checkout/
+
+# Allow product pages
+Allow: /products/
+Allow: /products/*
+Allow: /products/category/*
+
+# Sitemap
+Sitemap: https://urbaniq.vercel.app/api/sitemap 
