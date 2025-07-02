@@ -12,25 +12,50 @@ export function Footer() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           {/* Brand column */}
-          <div className="space-y-4">
-            <div className="flex items-center">
-            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="#000000" viewBox="0 0 256 256">
-              <path d="M96,140a12,12,0,1,1-12-12A12,12,0,0,1,96,140Zm76-12a12,12,0,1,0,12,12A12,12,0,0,0,172,128Zm60-80v88c0,52.93-46.65,96-104,96S24,188.93,24,136V48A16,16,0,0,1,51.31,36.69c.14.14.26.27.38.41L69,57a111.22,111.22,0,0,1,118.1,0L204.31,37.1c.12-.14.24-.27.38-.41A16,16,0,0,1,232,48Zm-16,0-21.56,24.8A8,8,0,0,1,183.63,74,88.86,88.86,0,0,0,168,64.75V88a8,8,0,1,1-16,0V59.05a97.43,97.43,0,0,0-16-2.72V88a8,8,0,1,1-16,0V56.33a97.43,97.43,0,0,0-16,2.72V88a8,8,0,1,1-16,0V64.75A88.86,88.86,0,0,0,72.37,74a8,8,0,0,1-10.81-1.17L40,48v88c0,41.66,35.21,76,80,79.67V195.31l-13.66-13.66a8,8,0,0,1,11.32-11.31L128,180.68l10.34-10.34a8,8,0,0,1,11.32,11.31L136,195.31v20.36c44.79-3.69,80-38,80-79.67Z"></path>
-            </svg>
-              <span className="ml-2 text-xl font-medium">UrbanIQ</span>
-            </div>
+                      <div className="space-y-4">
+              <div className="flex flex-col items-center">
+                <div className="w-20 h-20">
+                  <Image 
+                    src="/urbaniq-logo.png"
+                    alt="UrbanIQ Logo"
+                    width={80}
+                    height={80}
+                    className="w-full h-full object-contain"
+                    priority
+                  />
+                </div>
+                <span className="mt-2 text-xl font-medium">UrbanIQ</span>
+              </div>
             <p className="text-gray-600 text-sm max-w-xs">
               Elevating pet care with smart technology and innovative solutions for modern pet parents.
             </p>
             <div className="flex space-x-4">
-              <Link href="/" aria-label="Visit our Facebook page" className="text-gray-500 hover:text-gray-800 transition-colors">
-                <Facebook size={18} />
+              <Link
+                href="https://www.facebook.com/share/1AmLWpsDPL/?mibextid=wwXIfr"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-gray-600 hover:text-gray-800 transition-colors"
+              >
+                <Facebook className="h-5 w-5" />
+                <span className="sr-only">Facebook</span>
               </Link>
-              <Link href="/" aria-label="Visit our Instagram profile" className="text-gray-500 hover:text-gray-800 transition-colors">
-                <Instagram size={18} />
+              <Link
+                href="https://www.instagram.com/urbaniq_ca/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-gray-600 hover:text-gray-800 transition-colors"
+              >
+                <Instagram className="h-5 w-5" />
+                <span className="sr-only">Instagram</span>
               </Link>
-              <Link href="/" aria-label="Visit our Twitter profile" className="text-gray-500 hover:text-gray-800 transition-colors">
-                <Twitter size={18} />
+              <Link
+                href="https://twitter.com/urbaniq"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-gray-600 hover:text-gray-800 transition-colors"
+              >
+                <Twitter className="h-5 w-5" />
+                <span className="sr-only">Twitter</span>
               </Link>
             </div>
           </div>
@@ -40,24 +65,24 @@ export function Footer() {
             <h3 className="text-sm font-semibold uppercase tracking-wider text-gray-500 mb-4">Shop</h3>
             <ul className="space-y-2">
               <li>
-                <Link href="/" className="text-gray-600 hover:text-gray-900 text-sm group flex items-center">
+                <Link href="/products" className="text-gray-600 hover:text-gray-900 text-sm group flex items-center">
+                  <span>All products</span>
+                  <ArrowUpRight size={14} className="ml-1 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-200" />
+                </Link>
+              </li>
+              <li>
+                <Link href="/products/category/cameras" className="text-gray-600 hover:text-gray-900 text-sm group flex items-center">
+                  <span>Cameras</span>
+                  <ArrowUpRight size={14} className="ml-1 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-200" />
+                </Link>
+              </li>
+              <li>
+                <Link href="/products/category/smart-feeders" className="text-gray-600 hover:text-gray-900 text-sm group flex items-center">
                   <span>Smart Feeders</span>
                   <ArrowUpRight size={14} className="ml-1 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-200" />
                 </Link>
               </li>
-              <li>
-                <Link href="/" className="text-gray-600 hover:text-gray-900 text-sm group flex items-center">
-                  <span>Activity & Play</span>
-                  <ArrowUpRight size={14} className="ml-1 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-200" />
-                </Link>
-              </li>
-              <li>
-                <Link href="/" className="text-gray-600 hover:text-gray-900 text-sm group flex items-center">
-                  <span>Health & Fitness</span>
-                  <ArrowUpRight size={14} className="ml-1 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-200" />
-                </Link>
-              </li>
-              <li>
+              {/* <li>
                 <Link href="/" className="text-gray-600 hover:text-gray-900 text-sm group flex items-center">
                   <span>Travel Gear</span>
                   <ArrowUpRight size={14} className="ml-1 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-200" />
@@ -68,7 +93,7 @@ export function Footer() {
                   <span>Bundles</span>
                   <ArrowUpRight size={14} className="ml-1 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-200" />
                 </Link>
-              </li>
+              </li> */}
             </ul>
           </div>
 
@@ -77,12 +102,12 @@ export function Footer() {
             <h3 className="text-sm font-semibold uppercase tracking-wider text-gray-500 mb-4">Support</h3>
             <ul className="space-y-2">
               <li>
-                <Link href="/" className="text-gray-600 hover:text-gray-900 text-sm group flex items-center">
+                <Link href="/faqs" className="text-gray-600 hover:text-gray-900 text-sm group flex items-center">
                   <span>FAQs</span>
                   <ArrowUpRight size={14} className="ml-1 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-200" />
                 </Link>
               </li>
-              <li>
+              {/* <li>
                 <Link href="/" className="text-gray-600 hover:text-gray-900 text-sm group flex items-center">
                   <span>Shipping</span>
                   <ArrowUpRight size={14} className="ml-1 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-200" />
@@ -99,9 +124,9 @@ export function Footer() {
                   <span>Order Tracking</span>
                   <ArrowUpRight size={14} className="ml-1 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-200" />
                 </Link>
-              </li>
+              </li> */}
               <li>
-                <Link href="/" className="text-gray-600 hover:text-gray-900 text-sm group flex items-center">
+                <Link href="/contact" className="text-gray-600 hover:text-gray-900 text-sm group flex items-center">
                   <span>Contact Us</span>
                   <ArrowUpRight size={14} className="ml-1 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-200" />
                 </Link>
@@ -115,7 +140,7 @@ export function Footer() {
             <ul className="space-y-3">
               <li className="flex items-start">
                 <MapPin size={18} className="text-gray-500 mr-2 mt-0.5 flex-shrink-0" />
-                <span className="text-gray-600 text-sm">123 Innovation Drive, San Francisco, CA 94107</span>
+                <span className="text-gray-600 text-sm">123 Innovation Drive, Toronto, ON M5V 2T6</span>
               </li>
               <li className="flex items-center">
                 <Phone size={18} className="text-gray-500 mr-2 flex-shrink-0" />
@@ -148,20 +173,16 @@ export function Footer() {
           <div className="flex flex-col md:flex-row justify-between items-center">
             <p className="text-xs text-gray-500 mb-4 md:mb-0">© {currentYear} UrbanIQ. All Rights Reserved</p>
             <div className="flex flex-wrap gap-5">
-              <Link href="/" className="text-xs text-gray-500 hover:text-gray-900 transition-colors group flex items-center">
+              <Link href="/terms" className="text-xs text-gray-500 hover:text-gray-900 transition-colors group flex items-center">
                 <span>Terms</span>
                 <ArrowUpRight size={12} className="ml-0.5 opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-200" />
               </Link>
-              <Link href="/" className="text-xs text-gray-500 hover:text-gray-900 transition-colors group flex items-center">
+              <Link href="/privacy" className="text-xs text-gray-500 hover:text-gray-900 transition-colors group flex items-center">
                 <span>Privacy</span>
                 <ArrowUpRight size={12} className="ml-0.5 opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-200" />
               </Link>
-              <Link href="/" className="text-xs text-gray-500 hover:text-gray-900 transition-colors group flex items-center">
+              <Link href="/cookies" className="text-xs text-gray-500 hover:text-gray-900 transition-colors group flex items-center">
                 <span>Cookies</span>
-                <ArrowUpRight size={12} className="ml-0.5 opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-200" />
-              </Link>
-              <Link href="/" className="text-xs text-gray-500 hover:text-gray-900 transition-colors group flex items-center">
-                <span>Accessibility</span>
                 <ArrowUpRight size={12} className="ml-0.5 opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-200" />
               </Link>
             </div>

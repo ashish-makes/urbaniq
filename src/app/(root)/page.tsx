@@ -31,7 +31,7 @@ export const metadata: Metadata = {
     siteName: 'UrbanIQ',
     images: [
       {
-        url: '/og-image.jpg',
+        url: '/urbaniq-logo.png',
         width: 1200,
         height: 630,
         alt: 'UrbanIQ - Smart Pet Technology',
@@ -44,7 +44,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'UrbanIQ - Smart Pet Tech',
     description: 'Smart technology for modern pet parents. Keep your furry friends happy, healthy and safe with our innovative pet gadgets.',
-    images: ['/twitter-image.jpg'],
+    images: ['/urbaniq-logo.png'],
   },
   alternates: {
     canonical: 'https://urbaniq.ca/',
@@ -119,18 +119,64 @@ export default async function Home() {
   const featuredProducts = products.filter(product => product.featured || product.isBestseller).slice(0, 4);
   
   // Structured data for SEO (JSON-LD)
-  const jsonLd = {
-    "@context": "https://schema.org",
-    "@type": "WebSite",
-    "name": "UrbanIQ - Smart Pet Technology",
-    "url": "https://urbaniq.ca/",
-    "potentialAction": {
-      "@type": "SearchAction",
-      "target": "https://urbaniq.ca/search?q={search_term_string}",
-      "query-input": "required name=search_term_string"
+  const jsonLd = [
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "UrbanIQ",
+      "url": "https://urbaniq.ca",
+      "logo": "https://urbaniq.ca/urbaniq-logo.png",
+      "description": "Smart pet technology for modern pet parents. Discover innovative gadgets to help care for your furry friends.",
+      "foundingDate": "2025",
+      "image": [
+        "https://urbaniq.ca/hero-one.png",
+        "https://urbaniq.ca/hero-two.png",
+        "https://urbaniq.ca/hero-three.png"
+      ],
+      "address": {
+        "@type": "PostalAddress",
+        "streetAddress": "123 Innovation Drive",
+        "addressLocality": "Toronto",
+        "addressRegion": "ON",
+        "postalCode": "M5V 2T6",
+        "addressCountry": "CA"
+      },
+      "contactPoint": {
+        "@type": "ContactPoint",
+        "telephone": "+1-555-123-4567",
+        "contactType": "customer service",
+        "email": "info@urbaniq.ca",
+        "availableLanguage": ["English", "French"]
+      },
+      "sameAs": [
+        "https://www.facebook.com/share/1AmLWpsDPL/?mibextid=wwXIfr",
+        "https://www.instagram.com/urbaniq_ca/",
+        "https://twitter.com/urbaniq"
+      ],
+      "areaServed": {
+        "@type": "Country",
+        "name": "Canada"
+      },
+      "brand": {
+        "@type": "Brand",
+        "name": "UrbanIQ",
+        "slogan": "Smart Technology for the Modern Pet Parent",
+        "logo": "https://urbaniq.ca/urbaniq-logo.png"
+      }
     },
-    "description": "Smart pet technology for modern pet parents. Discover innovative gadgets to help care for your furry friends."
-  };
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "UrbanIQ - Smart Pet Technology",
+      "url": "https://urbaniq.ca/",
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": "https://urbaniq.ca/search?q={search_term_string}",
+        "query-input": "required name=search_term_string"
+      },
+      "description": "Smart pet technology for modern pet parents. Discover innovative gadgets to help care for your furry friends."
+    }
+  ];
   
   // Add Product schema for featured products
   const productsSchema = {
@@ -146,13 +192,21 @@ export default async function Home() {
         "image": product.images[0],
         "url": `https://urbaniq.ca/products/${product.slug}`,
         "sku": product.id,
+        "brand": {
+          "@type": "Brand",
+          "name": "UrbanIQ"
+        },
         "offers": {
           "@type": "Offer",
           "price": product.price,
-          "priceCurrency": "USD",
+          "priceCurrency": "CAD",
           "availability": product.inStock 
             ? "https://schema.org/InStock" 
-            : "https://schema.org/OutOfStock"
+            : "https://schema.org/OutOfStock",
+          "seller": {
+            "@type": "Organization",
+            "name": "UrbanIQ"
+          }
         },
         "aggregateRating": {
           "@type": "AggregateRating",

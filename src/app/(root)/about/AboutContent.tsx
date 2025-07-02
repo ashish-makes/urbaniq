@@ -635,10 +635,10 @@ export default function AboutContent() {
             "address": {
               "@type": "PostalAddress",
               "streetAddress": "123 Innovation Drive",
-              "addressLocality": "San Francisco",
-              "addressRegion": "CA",
-              "postalCode": "94107",
-              "addressCountry": "US"
+              "addressLocality": "Toronto",
+              "addressRegion": "ON",
+              "postalCode": "M5V 2T6",
+              "addressCountry": "CA"
             },
             "contactPoint": {
               "@type": "ContactPoint",
